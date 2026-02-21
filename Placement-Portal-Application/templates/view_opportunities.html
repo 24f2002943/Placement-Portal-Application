@@ -1,0 +1,19 @@
+
+<h2>Available Opportunities</h2>
+
+{% if opportunities %}
+    {% for opp in opportunities %}
+        <div style="border:1px solid gray; padding:10px; margin-bottom:10px;">
+            <h3>{{ opp[1] }}</h3>
+            <p><strong>Description:</strong> {{ opp[2] }}</p>
+            <p><strong>Location:</strong> {{ opp[3] }}</p>
+            <p><strong>CTC:</strong> {{ opp[4] }}</p>
+
+            <a href="{{ url_for('apply_opportunity', opportunity_id=opp[0]) }}">
+                Apply
+            </a>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No opportunities available currently.</p>
+{% endif %}

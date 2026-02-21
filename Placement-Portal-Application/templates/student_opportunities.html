@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Available Opportunities</title>
+</head>
+<body>
+
+<h2>Available Opportunities</h2>
+<hr>
+
+{% if opportunities %}
+    <ul>
+    {% for job in opportunities %}
+        <li style="margin-bottom:20px;">
+            
+            <strong>{{ job[2] }}</strong><br>
+            
+            <p>
+                <b>Description:</b> {{ job[3] }}<br>
+                <b>Location:</b> {{ job[4] }}<br>
+                <b>CTC:</b> {{ job[5] }}
+            </p>
+
+            <a href="{{ url_for('apply_opportunity', opportunity_id=job[0]) }}">
+                Apply Now
+            </a>
+
+        </li>
+        <hr>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No opportunities available currently.</p>
+{% endif %}
+
+<br>
+<a href="{{ url_for('student_dashboard') }}">Back to Dashboard</a>
+
+</body>
+</html>
