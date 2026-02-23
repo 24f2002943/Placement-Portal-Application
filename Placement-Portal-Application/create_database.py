@@ -5,16 +5,11 @@ DB_NAME = "placement_portal.db"
 
 
 def create_tables():
-    """
-    This function initializes the complete database schema
-    for the Placement Portal system.
-    """
-
     connection = sqlite3.connect(DB_NAME)
     cursor = connection.cursor()
 
-    # Enable foreign key enforcement
-    cursor.execute("PRAGMA foreign_keys = ON;")
+    # Enable Foreign Keys
+    cursor.execute("PRAGMA foreign_keys = ON")
 
     # ---------------- ADMIN TABLE ----------------
     cursor.execute("""
@@ -24,6 +19,14 @@ def create_tables():
         password_hash TEXT NOT NULL
     );
     """)
+
+    # Insert Default Admin
+    cursor.execute("SELECT * FROM Admin WHERE username = ?", ("admin",))
+    if not cursor.fetchone():
+        cursor.execute("""
+        INSERT INTO Admin (username, password_hash)
+        VALUES (?, ?)
+        """, ("admin", generate_password_hash("admin123")))
 
     # ---------------- COMPANY TABLE ----------------
     cursor.execute("""
@@ -48,95 +51,74 @@ def create_tables():
     );
     """)
 
-    # ---------------- OPPORTUNITY TABLE ----------------
+    # ---------------- JOB POSITION TABLE ----------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS Opportunity (
-        opportunity_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        posted_by_company INTEGER NOT NULL,
-        role_title TEXT NOT NULL,
-        role_description TEXT NOT NULL,
-        job_location TEXT NOT NULL,
-        offered_ctc TEXT NOT NULL,
-        created_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (posted_by_company)
+    CREATE TABLE IF NOT EXISTS JobPosition (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        location TEXT NOT NULL,
+        ctc TEXT NOT NULL,
+        deadline TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (company_id)
             REFERENCES Company(id)
             ON DELETE CASCADE
     );
     """)
 
-    # ---------------- APPLICATION TRACKER TABLE ----------------
+    # ---------------- APPLICATION TABLE ----------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS ApplicationTracker (
-        application_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        applicant_student INTEGER NOT NULL,
-        related_opportunity INTEGER NOT NULL,
-        current_status TEXT DEFAULT 'Under Review',
-        applied_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CREATE TABLE IF NOT EXISTS Application (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
 
-        FOREIGN KEY (applicant_student)
+        status TEXT DEFAULT 'Pending'
+            CHECK(status IN ('Pending', 'Shortlisted', 'Selected', 'Rejected')),
+
+        applied_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+        FOREIGN KEY (student_id)
             REFERENCES Student(id)
             ON DELETE CASCADE,
 
-        FOREIGN KEY (related_opportunity)
-            REFERENCES Opportunity(opportunity_id)
+        FOREIGN KEY (job_id)
+            REFERENCES JobPosition(id)
             ON DELETE CASCADE,
 
-        UNIQUE(applicant_student, related_opportunity)
+        UNIQUE(student_id, job_id)
     );
     """)
 
-    # ---------------- DEFAULT ADMIN INSERT ----------------
-    cursor.execute("SELECT * FROM Admin WHERE username = ?", ("admin",))
-    if not cursor.fetchone():
-        cursor.execute("""
-        INSERT INTO Admin (username, password_hash)
-        VALUES (?, ?)
-        """, ("admin", generate_password_hash("admin123")))
-    # Insert sample company if not exists
-    cursor.execute("SELECT * FROM Company WHERE email = ?", ("testcompany@gmail.com",))
-    if not cursor.fetchone():
-       cursor.execute("""
-       INSERT INTO Company (name, email, password_hash, approval_status)
-       VALUES (?, ?, ?, ?)
-       """, ("Test Company", "testcompany@gmail.com", generate_password_hash("1234"), "Approved"))
-
-    # Get company ID
-    cursor.execute("SELECT id FROM Company WHERE email = ?", ("testcompany@gmail.com",))
-    company_id = cursor.fetchone()[0]
-
-    # Insert sample opportunity
+    # Create index for faster queries
     cursor.execute("""
-    INSERT INTO Opportunity (
-        posted_by_company,
-        role_title,
-        role_description,
-        job_location,
-        offered_ctc
-    )
-    VALUES (?, ?, ?, ?, ?)
-    """, (
-        company_id,
-        "Backend Developer",
-        "Looking for Python + Flask developer",
-        "Bangalore",
-        "8 LPA"
-    ))
+    CREATE INDEX IF NOT EXISTS idx_application_student
+    ON Application(student_id);
+    """)
 
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_application_job
+    ON Application(job_id);
+    """)
 
     # ---------------- PLACEMENT TABLE ----------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Placement (
-        placement_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        related_application INTEGER NOT NULL UNIQUE,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        application_id INTEGER NOT NULL UNIQUE,
         offer_package TEXT NOT NULL,
         joining_date DATE,
         placement_status TEXT DEFAULT 'Confirmed',
 
-        FOREIGN KEY (related_application)
-            REFERENCES ApplicationTracker(application_id)
+        FOREIGN KEY (application_id)
+            REFERENCES Application(id)
             ON DELETE CASCADE
     );
     """)
+
     connection.commit()
     connection.close()
 

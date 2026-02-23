@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+
+<h2>Admin Dashboard</h2>
+<hr>
+
+<h3>Pending Company Approvals</h3>
+
+{% if companies %}
+    <ul>
+    {% for company in companies %}
+        <li>
+            <strong>{{ company[1] }}</strong> ({{ company[2] }})
+            <a href="{{ url_for('approve_company', company_id=company[0]) }}">
+                Approve
+            </a>
+        </li>
+        <br>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No pending companies.</p>
+{% endif %}
+
+</body>
+</html>
