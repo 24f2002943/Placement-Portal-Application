@@ -8,9 +8,8 @@ app.secret_key = "supersecretkey"
 
 DB_NAME = "placement_portal.db"
 
-
 # ==================================================
-# ROLE DECORATORS (DEFINED ONLY ONCE)
+# ROLE DECORATORS
 # ==================================================
 
 def student_required(f):
@@ -61,15 +60,17 @@ def admin_login():
 
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT password_hash FROM Admin WHERE username = ?", (username,))
+
+        cursor.execute("SELECT * FROM Admin WHERE username = ?", (username,))
         admin = cursor.fetchone()
         conn.close()
 
-        if admin and check_password_hash(admin[0], password):
-            session["admin"] = username
+        if admin and check_password_hash(admin[2], password):
+            session.clear()
+            session["admin"] = admin[0]
             return redirect(url_for("admin_dashboard"))
-        else:
-            return render_template("admin_login.html", error="Invalid Credentials")
+
+        return "Invalid credentials"
 
     return render_template("admin_login.html")
 
@@ -77,33 +78,211 @@ def admin_login():
 @app.route("/admin/dashboard")
 @admin_required
 def admin_dashboard():
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
 
-    cursor.execute("SELECT * FROM Company WHERE approval_status = 'Pending'")
-    pending_companies = cursor.fetchall()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-    connection.close()
+    cursor.execute("SELECT COUNT(*) FROM Company")
+    total_companies = cursor.fetchone()[0]
 
-    return render_template("admin_dashboard.html", companies=pending_companies)
+    cursor.execute("SELECT COUNT(*) FROM Student")
+    total_students = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM JobPosition")
+    total_jobs = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM Application")
+    total_applications = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM Placement")
+    total_placements = cursor.fetchone()[0]
+
+    conn.close()
+
+    return render_template(
+        "admin_dashboard.html",
+        companies=total_companies,
+        students=total_students,
+        jobs=total_jobs,
+        applications=total_applications,
+        placements=total_placements
+    )
 
 
-@app.route("/admin/approve_company/<int:company_id>")
+# ---------------- MANAGE STUDENTS ----------------
+
+@app.route("/admin/manage_students")
 @admin_required
-def approve_company(company_id):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
+def manage_students():
+
+    search_query = request.args.get("search", "")
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if search_query:
+        cursor.execute("""
+            SELECT * FROM Student
+            WHERE full_name LIKE ?
+            OR email LIKE ?
+        """, (f"%{search_query}%", f"%{search_query}%"))
+    else:
+        cursor.execute("SELECT * FROM Student")
+
+    students = cursor.fetchall()
+    conn.close()
+
+    return render_template("manage_students.html",
+                           students=students,
+                           search_query=search_query)
+
+
+@app.route("/admin/blacklist/student/<int:student_id>")
+@admin_required
+def blacklist_student(student_id):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
     cursor.execute("""
-        UPDATE Company
-        SET approval_status = 'Approved'
+        UPDATE Student
+        SET is_blacklisted = 1
         WHERE id = ?
-    """, (company_id,))
+    """, (student_id,))
 
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("manage_students"))
+
+
+# ---------------- MANAGE COMPANIES ----------------
+
+@app.route("/admin/manage_companies")
+@admin_required
+def manage_companies():
+
+    search_query = request.args.get("search", "")
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if search_query:
+        cursor.execute("""
+            SELECT * FROM Company
+            WHERE name LIKE ?
+            OR email LIKE ?
+            OR industry LIKE ?
+        """, (f"%{search_query}%", f"%{search_query}%"))
+    else:
+        cursor.execute("SELECT * FROM Company")
+
+    companies = cursor.fetchall()
+    conn.close()
+
+    return render_template("manage_companies.html",
+                           companies=companies,
+                           search_query=search_query)
+
+
+@app.route("/admin/company/<int:company_id>/<string:action>")
+@admin_required
+def update_company_status(company_id, action):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    if action == "approve":
+        cursor.execute("UPDATE Company SET approval_status='Approved' WHERE id=?", (company_id,))
+    elif action == "reject":
+        cursor.execute("UPDATE Company SET approval_status='Rejected' WHERE id=?", (company_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("manage_companies"))
+
+
+@app.route("/admin/blacklist/company/<int:company_id>")
+@admin_required
+def blacklist_company(company_id):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE Company SET is_blacklisted=1 WHERE id=?", (company_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("manage_companies"))
+
+
+# ---------------- MANAGE JOBS ----------------
+
+@app.route("/admin/manage_jobs")
+@admin_required
+def manage_jobs():
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT JobPosition.*, Company.name
+        FROM JobPosition
+        JOIN Company ON JobPosition.company_id = Company.id
+    """)
+
+    jobs = cursor.fetchall()
+    conn.close()
+
+    return render_template("manage_jobs.html", jobs=jobs)
+
+
+@app.route("/admin/job/<int:job_id>/<string:action>")
+@admin_required
+def update_job_status(job_id, action):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    if action == "approve":
+        cursor.execute("UPDATE JobPosition SET approval_status='Approved' WHERE id=?", (job_id,))
+    elif action == "reject":
+        cursor.execute("UPDATE JobPosition SET approval_status='Rejected' WHERE id=?", (job_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("manage_jobs"))
+
+
+# ---------------- MANAGE APPLICATIONS ----------------
+
+@app.route("/admin/manage_applications")
+@admin_required
+def manage_applications():
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT Application.id,
+               Application.status,
+               Student.full_name AS student_name,
+               JobPosition.title AS job_title
+        FROM Application
+        JOIN Student ON Application.student_id = Student.id
+        JOIN JobPosition ON Application.job_id = JobPosition.id
+    """)
+
+    applications = cursor.fetchall()
+    conn.close()
+
+    return render_template("manage_applications.html", applications=applications)
 
 
 # ==================================================
@@ -112,6 +291,7 @@ def approve_company(company_id):
 
 @app.route("/company/register", methods=["GET", "POST"])
 def company_register():
+
     if request.method == "POST":
         name = request.form["name"]
         email = request.form["email"]
@@ -124,12 +304,14 @@ def company_register():
 
         try:
             cursor.execute("""
-                INSERT INTO Company (name, email, password_hash, approval_status)
-                VALUES (?, ?, ?, 'Pending')
+                INSERT INTO Company (name, email, password_hash, approval_status, is_blacklisted)
+                VALUES (?, ?, ?, 'Pending', 0)
             """, (name, email, hashed_password))
+
             conn.commit()
             conn.close()
             return "Registration Successful! Wait for Admin Approval."
+
         except sqlite3.IntegrityError:
             conn.close()
             return "Email already exists!"
@@ -139,25 +321,41 @@ def company_register():
 
 @app.route("/company/login", methods=["GET", "POST"])
 def company_login():
+
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip()
         password = request.form["password"]
 
-        connection = sqlite3.connect(DB_NAME)
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM Company WHERE email = ?", (email,))
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, password_hash, approval_status, is_blacklisted
+            FROM Company
+            WHERE email = ?
+        """, (email,))
+
         company = cursor.fetchone()
-        connection.close()
+        conn.close()
 
-        if company and check_password_hash(company[3], password):
+        if not company:
+            return "Invalid email or password"
 
-            if company[4] != "Approved":
-                return "Your account is pending admin approval."
+        company_id, stored_password, approval_status, is_blacklisted = company
 
-            session["company"] = company[0]
-            return redirect(url_for("company_dashboard"))
+        if is_blacklisted == 1:
+            return "Your company has been blacklisted."
 
-        return "Invalid email or password"
+        if approval_status != "Approved":
+            return "Your account is pending admin approval."
+
+        if not check_password_hash(stored_password, password):
+            return "Invalid email or password"
+
+        session.clear()
+        session["company"] = company_id
+
+        return redirect(url_for("company_dashboard"))
 
     return render_template("company_login.html")
 
@@ -168,75 +366,13 @@ def company_dashboard():
     return "<h2>Welcome Company! Login Successful 🎉</h2>"
 
 
-@app.route("/company/post_job", methods=["GET", "POST"])
-@company_required
-def post_job():
-    if request.method == "POST":
-        title = request.form["title"]
-        description = request.form["description"]
-        location = request.form["location"]
-        ctc = request.form["ctc"]
-        deadline = request.form["deadline"]
-
-        connection = sqlite3.connect(DB_NAME)
-        cursor = connection.cursor()
-
-        cursor.execute("""
-        INSERT INTO JobPosition (company_id, title, description, location, ctc, deadline)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """, (session["company"], title, description, location, ctc, deadline))
-
-        connection.commit()
-        connection.close()
-
-        return "Job Posted Successfully!"
-
-    return render_template("post_job.html")
-
-
-@app.route("/company/update_status/<int:application_id>/<string:new_status>")
-@company_required
-def update_status(application_id, new_status):
-
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-
-    # Update application status
-    cursor.execute("""
-    UPDATE Application
-    SET status = ?, last_updated = CURRENT_TIMESTAMP
-    WHERE id = ?
-    """, (new_status, application_id))
-
-    # ---------------- AUTO CREATE PLACEMENT ----------------
-    if new_status == "Selected":
-
-        # Check if placement already exists
-        cursor.execute("""
-        SELECT id FROM Placement
-        WHERE application_id = ?
-        """, (application_id,))
-
-        placement_exists = cursor.fetchone()
-
-        if not placement_exists:
-            cursor.execute("""
-            INSERT INTO Placement (application_id, offer_package, joining_date)
-            VALUES (?, ?, ?)
-            """, (application_id, "6 LPA", None))   # Default package (can customize later)
-
-    connection.commit()
-    connection.close()
-
-    return redirect(request.referrer)
-
-
 # ==================================================
 # STUDENT SECTION
 # ==================================================
 
 @app.route("/student/register", methods=["GET", "POST"])
 def student_register():
+
     if request.method == "POST":
         full_name = request.form["full_name"]
         email = request.form["email"]
@@ -252,9 +388,11 @@ def student_register():
                 INSERT INTO Student (full_name, email, password_hash, is_blacklisted)
                 VALUES (?, ?, ?, 0)
             """, (full_name, email, hashed_password))
+
             conn.commit()
             conn.close()
             return "Student Registration Successful!"
+
         except sqlite3.IntegrityError:
             conn.close()
             return "Email already exists!"
@@ -264,16 +402,20 @@ def student_register():
 
 @app.route("/student/login", methods=["GET", "POST"])
 def student_login():
+
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip()
         password = request.form["password"]
 
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
+
         cursor.execute("""
             SELECT id, password_hash, is_blacklisted
-            FROM Student WHERE email = ?
+            FROM Student
+            WHERE email = ?
         """, (email,))
+
         student = cursor.fetchone()
         conn.close()
 
@@ -283,13 +425,15 @@ def student_login():
         student_id, stored_password, is_blacklisted = student
 
         if is_blacklisted == 1:
-            return "You are blacklisted by Admin."
+            return "Your account has been blacklisted."
 
-        if check_password_hash(stored_password, password):
-            session["student"] = student_id
-            return redirect(url_for("student_dashboard"))
+        if not check_password_hash(stored_password, password):
+            return "Invalid Credentials"
 
-        return "Invalid Credentials"
+        session.clear()
+        session["student"] = student_id
+
+        return redirect(url_for("student_dashboard"))
 
     return render_template("student_login.html")
 
@@ -298,46 +442,6 @@ def student_login():
 @student_required
 def student_dashboard():
     return render_template("student_dashboard.html")
-
-
-@app.route("/student/jobs")
-@student_required
-def view_jobs():
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-    SELECT JobPosition.id, Company.name, title, location, ctc, deadline
-    FROM JobPosition
-    JOIN Company ON JobPosition.company_id = Company.id
-    """)
-
-    jobs = cursor.fetchall()
-    connection.close()
-
-    return render_template("student_jobs.html", jobs=jobs)
-
-
-@app.route("/student/apply/<int:job_id>")
-@student_required
-def apply_job(job_id):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO Application (student_id, job_id)
-        VALUES (?, ?)
-        """, (session["student"], job_id))
-
-        connection.commit()
-        message = "Application Submitted Successfully!"
-
-    except sqlite3.IntegrityError:
-        message = "You have already applied to this job."
-
-    connection.close()
-    return message
 
 
 # ==================================================

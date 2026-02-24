@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Companies</title>
+</head>
+<body>
+
+<h2>Manage Companies</h2>
+
+<!-- 🔍 Search Form -->
+<form method="GET">
+    <input type="text" name="search"
+           placeholder="Search by name or email"
+           value="{{ search_query }}">
+    <button type="submit">Search</button>
+</form>
+
+<br>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>ID</th>
+        <th>Company Name</th>
+        <th>Email</th>
+        <th>Approval Status</th>
+        <th>Blacklist Status</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for company in companies %}
+    <tr>
+        <td>{{ company["id"] }}</td>
+        <td>{{ company["name"] }}</td>
+        <td>{{ company["email"] }}</td>
+
+        <td>{{ company["approval_status"] }}</td>
+
+        <td>
+            {% if company["is_blacklisted"] == 1 %}
+                Blacklisted
+            {% else %}
+                Active
+            {% endif %}
+        </td>
+
+        <td>
+            {% if company["approval_status"] != "Approved" %}
+                <a href="/admin/approve_company/{{ company['id'] }}">
+                    Approve
+                </a>
+            {% endif %}
+
+            {% if company["is_blacklisted"] == 0 %}
+                |
+                <a href="/admin/blacklist/company/{{ company['id'] }}">
+                    Blacklist
+                </a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+<br>
+<a href="/admin/dashboard">Back to Dashboard</a>
+
+</body>
+</html>

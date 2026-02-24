@@ -1,0 +1,25 @@
+@app.route("/admin/manage_companies")
+@admin_required
+def manage_companies():
+
+    search_query = request.args.get("search", "")
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if search_query:
+        cursor.execute("""
+            SELECT * FROM Company
+            WHERE name LIKE ?
+            OR email LIKE ?
+        """, (f"%{search_query}%", f"%{search_query}%"))
+    else:
+        cursor.execute("SELECT * FROM Company")
+
+    companies = cursor.fetchall()
+    conn.close()
+
+    return render_template("manage_companies.html",
+                           companies=companies,
+                           search_query=search_query)

@@ -2,29 +2,67 @@
 <html>
 <head>
     <title>Admin Dashboard</title>
+    <style>
+        body { font-family: Arial; background:#f4f4f4; }
+        .card {
+            display:inline-block;
+            width:200px;
+            padding:20px;
+            margin:15px;
+            background:white;
+            border-radius:10px;
+            box-shadow:0 4px 8px rgba(0,0,0,0.1);
+            text-align:center;
+        }
+        h1 { text-align:center; }
+        .menu { text-align:center; margin-top:30px; }
+        .menu a {
+            padding:10px 20px;
+            background:#007bff;
+            color:white;
+            text-decoration:none;
+            border-radius:5px;
+            margin:5px;
+        }
+    </style>
 </head>
 <body>
 
-<h2>Admin Dashboard</h2>
-<hr>
+<h1>Admin Dashboard</h1>
 
-<h3>Pending Company Approvals</h3>
+<div style="text-align:center;">
+    <div class="card">
+        <h2>{{ companies }}</h2>
+        <p>Total Companies</p>
+    </div>
 
-{% if companies %}
-    <ul>
-    {% for company in companies %}
-        <li>
-            <strong>{{ company[1] }}</strong> ({{ company[2] }})
-            <a href="{{ url_for('approve_company', company_id=company[0]) }}">
-                Approve
-            </a>
-        </li>
-        <br>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No pending companies.</p>
-{% endif %}
+    <div class="card">
+        <h2>{{ students }}</h2>
+        <p>Total Students</p>
+    </div>
+
+    <div class="card">
+        <h2>{{ jobs }}</h2>
+        <p>Total Jobs</p>
+    </div>
+
+    <div class="card">
+        <h2>{{ applications }}</h2>
+        <p>Total Applications</p>
+    </div>
+
+    <div class="card">
+        <h2>{{ placements }}</h2>
+        <p>Total Placements</p>
+    </div>
+</div>
+
+<div class="menu">
+    <a href="/admin/manage_companies">Manage Companies</a>
+    <a href="/admin/manage_students">Manage Students</a>
+    <a href="/admin/manage_jobs">Manage Jobs</a>
+    <a href="/admin/manage_applications">Manage Applications</a>
+</div>
 
 </body>
 </html>

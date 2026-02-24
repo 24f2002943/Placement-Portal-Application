@@ -20,13 +20,19 @@ def create_tables():
     );
     """)
 
-    # Insert Default Admin
-    cursor.execute("SELECT * FROM Admin WHERE username = ?", ("admin",))
-    if not cursor.fetchone():
+    # Insert Default Admin (Only if not exists)
+    cursor.execute("SELECT * FROM Admin WHERE username = 'admin'")
+    admin_exists = cursor.fetchone()
+
+    if not admin_exists:
+        from werkzeug.security import generate_password_hash
         cursor.execute("""
         INSERT INTO Admin (username, password_hash)
         VALUES (?, ?)
-        """, ("admin", generate_password_hash("admin123")))
+        """, (
+            "admin",
+            generate_password_hash("admin123")
+        ))
 
     # ---------------- COMPANY TABLE ----------------
     cursor.execute("""
@@ -56,16 +62,36 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS JobPosition (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         company_id INTEGER NOT NULL,
+
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         location TEXT NOT NULL,
         ctc TEXT NOT NULL,
         deadline TEXT,
+
+        approval_status TEXT DEFAULT 'Pending'
+            CHECK(approval_status IN ('Pending','Approved','Rejected')),
+
+        is_active INTEGER DEFAULT 1,   -- 1 = Active, 0 = Disabled
+
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
         FOREIGN KEY (company_id)
             REFERENCES Company(id)
             ON DELETE CASCADE
     );
+    """)
+
+    # Index for faster filtering
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_job_company
+    ON JobPosition(company_id);
+    """)
+
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_job_status
+    ON JobPosition(approval_status);
     """)
 
     # ---------------- APPLICATION TABLE ----------------

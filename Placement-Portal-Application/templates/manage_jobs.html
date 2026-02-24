@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Jobs</title>
+</head>
+<body>
+
+<h2>Manage Job Postings</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>ID</th>
+        <th>Company</th>
+        <th>Title</th>
+        <th>Location</th>
+        <th>CTC</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for job in jobs %}
+    <tr>
+        <td>{{ job[0] }}</td>
+        <td>{{ job[-1] }}</td>
+        <td>{{ job[2] }}</td>
+        <td>{{ job[4] }}</td>
+        <td>{{ job[5] }}</td>
+        <td>{{ job[7] }}</td>
+
+        <td>
+            <a href="/admin/job/{{ job[0] }}/approve">Approve</a> |
+            <a href="/admin/job/{{ job[0] }}/reject">Reject</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/admin/dashboard">Back to Dashboard</a>
+
+</body>
+</html>
