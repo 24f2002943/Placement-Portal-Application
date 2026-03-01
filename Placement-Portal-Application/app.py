@@ -1026,6 +1026,12 @@ def student_dashboard():
         search=search
     )
 
+# Placement Tracking System:
+# - Prevent duplicate applications
+# - Lock student after placement
+# - Snapshot resume at time of application
+# - Status lifecycle: Applied -> Shortlisted -> Interview -> Placed/Rejected
+
 @app.route("/student/profile", methods=["GET", "POST"])
 @student_required
 def student_profile():
