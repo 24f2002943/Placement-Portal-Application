@@ -2,14 +2,15 @@ import sqlite3
 from werkzeug.security import generate_password_hash
 
 DB_NAME = "placement_portal.db"
-
+# TODO:
+# Add industry column to Company
+# Add proper upcoming/past filtering in admin manage jobs
+# Update search to include industry + student id
 
 def create_tables():
     connection = sqlite3.connect(DB_NAME)
+    connection.execute("PRAGMA foreign_keys = ON")
     cursor = connection.cursor()
-
-    # Enable Foreign Keys
-    cursor.execute("PRAGMA foreign_keys = ON")
 
     # ---------------- ADMIN TABLE ----------------
     cursor.execute("""
@@ -20,19 +21,12 @@ def create_tables():
     );
     """)
 
-    # Insert Default Admin (Only if not exists)
-    cursor.execute("SELECT * FROM Admin WHERE username = 'admin'")
-    admin_exists = cursor.fetchone()
-
-    if not admin_exists:
-        from werkzeug.security import generate_password_hash
+    cursor.execute("SELECT id FROM Admin WHERE username = ?", ("admin",))
+    if not cursor.fetchone():
         cursor.execute("""
         INSERT INTO Admin (username, password_hash)
         VALUES (?, ?)
-        """, (
-            "admin",
-            generate_password_hash("admin123")
-        ))
+        """, ("admin", generate_password_hash("admin123")))
 
     # ---------------- COMPANY TABLE ----------------
     cursor.execute("""
@@ -41,9 +35,39 @@ def create_tables():
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        approval_status TEXT DEFAULT 'Pending',
+        phone TEXT,
+        website TEXT,
+        location TEXT,
+        description TEXT,
+        industry TEXT,
+ 
+        approval_status TEXT DEFAULT 'Pending'
+            CHECK(approval_status IN ('Pending','Approved','Rejected')),
+
         is_blacklisted INTEGER DEFAULT 0
+            CHECK(is_blacklisted IN (0,1)),
+
+        approved_by INTEGER,
+        approved_date DATETIME,
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+        FOREIGN KEY (approved_by)
+            REFERENCES Admin(id)
+            ON DELETE SET NULL
     );
+    """)
+
+    cursor.execute("""
+    CREATE TRIGGER IF NOT EXISTS update_company_timestamp
+    AFTER UPDATE ON Company
+    FOR EACH ROW
+    BEGIN
+        UPDATE Company
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = OLD.id;
+    END;
     """)
 
     # ---------------- STUDENT TABLE ----------------
@@ -53,26 +77,54 @@ def create_tables():
         full_name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        phone TEXT,
+        degree TEXT,
+        branch TEXT,
+        college TEXT,
+        cgpa REAL,
+        skills TEXT,
+        resume_path TEXT,
+
         is_blacklisted INTEGER DEFAULT 0
+            CHECK(is_blacklisted IN (0,1)),
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
-    # ---------------- JOB POSITION TABLE ----------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS JobPosition (
+    CREATE TRIGGER IF NOT EXISTS update_student_timestamp
+    AFTER UPDATE ON Student
+    FOR EACH ROW
+    BEGIN
+        UPDATE Student
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = OLD.id;
+    END;
+    """)
+
+    # ---------------- PLACEMENT DRIVE TABLE ----------------
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS PlacementDrive (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         company_id INTEGER NOT NULL,
 
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         location TEXT NOT NULL,
-        ctc TEXT NOT NULL,
-        deadline TEXT,
+        required_skills TEXT NOT NULL,
+        experience_required TEXT NOT NULL,
+
+        min_salary INTEGER,
+        max_salary INTEGER,
+        deadline DATE,
 
         approval_status TEXT DEFAULT 'Pending'
             CHECK(approval_status IN ('Pending','Approved','Rejected')),
 
-        is_active INTEGER DEFAULT 1,   -- 1 = Active, 0 = Disabled
+        drive_status TEXT DEFAULT 'Active'
+            CHECK(drive_status IN ('Active','Closed')),
 
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -83,61 +135,91 @@ def create_tables():
     );
     """)
 
-    # Index for faster filtering
-    cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_job_company
-    ON JobPosition(company_id);
-    """)
+
+
 
     cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_job_status
-    ON JobPosition(approval_status);
+    CREATE TRIGGER IF NOT EXISTS update_drive_timestamp
+    AFTER UPDATE ON PlacementDrive
+    FOR EACH ROW
+    BEGIN
+        UPDATE PlacementDrive
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = OLD.id;
+    END;
     """)
 
-    # ---------------- APPLICATION TABLE ----------------
+   #------------- APPLICATION TABLE ----------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Application (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         student_id INTEGER NOT NULL,
-        job_id INTEGER NOT NULL,
+        drive_id INTEGER NOT NULL,
+                   
+        -- Resume snapshot (CRITICAL ADDITION)
+        resume_snapshot_path TEXT NOT NULL,
 
-        status TEXT DEFAULT 'Pending'
-            CHECK(status IN ('Pending', 'Shortlisted', 'Selected', 'Rejected')),
+        -- Student Answers (Application Form)
+        related_work TEXT NOT NULL,
+        related_projects TEXT NOT NULL,
+        job_fit_statement TEXT NOT NULL,
 
-        applied_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        --  status Tracking
+        status TEXT NOT NULL DEFAULT 'Applied'
+            CHECK(status IN (
+                'Applied',
+                'Shortlisted',
+                'Interview',
+                'Rejected',
+                'Placed'
+            )),
+
+        -- Timestamps
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
 
+        -- Notification tracking
+        last_seen_status TEXT DEFAULT 'Applied',
+
+        -- Foreign Keys
         FOREIGN KEY (student_id)
             REFERENCES Student(id)
             ON DELETE CASCADE,
 
-        FOREIGN KEY (job_id)
-            REFERENCES JobPosition(id)
+        FOREIGN KEY (drive_id)
+            REFERENCES PlacementDrive(id)
             ON DELETE CASCADE,
 
-        UNIQUE(student_id, job_id)
+        -- Prevent duplicate applications
+        UNIQUE(student_id, drive_id)
     );
     """)
-
-    # Create index for faster queries
     cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_application_student
-    ON Application(student_id);
+    CREATE TRIGGER IF NOT EXISTS update_application_timestamp
+    AFTER UPDATE ON Application
+    FOR EACH ROW
+    BEGIN
+        UPDATE Application
+        SET last_updated = CURRENT_TIMESTAMP
+        WHERE id = NEW.id;
+    END;
     """)
 
-    cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_application_job
-    ON Application(job_id);
-    """)
-
+    
     # ---------------- PLACEMENT TABLE ----------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Placement (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         application_id INTEGER NOT NULL UNIQUE,
-        offer_package TEXT NOT NULL,
+        offer_package TEXT,
         joining_date DATE,
-        placement_status TEXT DEFAULT 'Confirmed',
+
+        placement_status TEXT DEFAULT 'Confirmed'
+            CHECK(placement_status IN ('Confirmed','Joined','Declined')),
+
+        placed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
         FOREIGN KEY (application_id)
             REFERENCES Application(id)

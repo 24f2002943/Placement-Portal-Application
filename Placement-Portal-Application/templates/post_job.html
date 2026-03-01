@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post New Placement Drive</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+
+        form {
+            width: 500px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Post New Placement Drive</h2>
+
+<form method="POST" action="{{ url_for('post_drive') }}">
+
+    <label>Job Title:</label>
+    <input type="text" name="title" required>
+
+    <label>Job Description:</label>
+    <textarea name="description" rows="4" required></textarea>
+
+    <label>Location:</label>
+    <input type="text" name="location" required>
+
+    <label>Required Skills:</label>
+    <input type="text" name="required_skills" placeholder="Python, SQL, Flask" required>
+
+    <label>Experience Required:</label>
+    <input type="text" name="experience_required" placeholder="0-2 Years" required>
+
+    <label>Minimum Salary:</label>
+    <input type="number" name="min_salary" required>
+
+    <label>Maximum Salary:</label>
+    <input type="number" name="max_salary" required>
+
+    <label>Application Deadline:</label>
+    <input type="date" name="deadline" required>
+
+    <button type="submit">Post Drive</button>
+
+</form>
+
+<br>
+
+<a href="{{ url_for('company_dashboard') }}">⬅ Back to Dashboard</a>
+
+</body>
+</html>

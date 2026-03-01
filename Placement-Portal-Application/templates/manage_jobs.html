@@ -1,42 +1,109 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Manage Jobs</title>
+    <title>Manage Placement Drives</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #999;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e0e0e0;
+        }
+
+        .btn {
+            padding: 6px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 13px;
+            color: white;
+        }
+
+        .btn-approve { background-color: green; }
+        .btn-reject { background-color: red; }
+
+        .status-approved { color: green; font-weight: bold; }
+        .status-rejected { color: red; font-weight: bold; }
+        .status-pending { color: orange; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-<h2>Manage Job Postings</h2>
+<h2>Manage Placement Drives</h2>
 
-<table border="1" cellpadding="10">
+{% if jobs %}
+<table>
     <tr>
         <th>ID</th>
         <th>Company</th>
         <th>Title</th>
         <th>Location</th>
-        <th>CTC</th>
-        <th>Status</th>
+        <th>Salary Range</th>
+        <th>Deadline</th>
+        <th>Approval Status</th>
+        <th>Drive Status</th>
         <th>Actions</th>
     </tr>
 
     {% for job in jobs %}
     <tr>
-        <td>{{ job[0] }}</td>
-        <td>{{ job[-1] }}</td>
-        <td>{{ job[2] }}</td>
-        <td>{{ job[4] }}</td>
-        <td>{{ job[5] }}</td>
-        <td>{{ job[7] }}</td>
+        <!-- Based on PlacementDrive structure -->
+        <td>{{ job[0] }}</td> <!-- id -->
+        <td>{{ job[-1] }}</td> <!-- Company.name from JOIN -->
+        <td>{{ job[2] }}</td> <!-- title -->
+        <td>{{ job[4] }}</td> <!-- location -->
 
         <td>
-            <a href="/admin/job/{{ job[0] }}/approve">Approve</a> |
-            <a href="/admin/job/{{ job[0] }}/reject">Reject</a>
+            {{ job[7] }} - {{ job[8] }}
+        </td> <!-- min_salary - max_salary -->
+
+        <td>{{ job[9] }}</td> <!-- deadline -->
+
+        <td>
+            {% if job[10] == "Approved" %}
+                <span class="status-approved">Approved</span>
+            {% elif job[10] == "Rejected" %}
+                <span class="status-rejected">Rejected</span>
+            {% else %}
+                <span class="status-pending">Pending</span>
+            {% endif %}
+        </td>
+
+        <td>{{ job[11] }}</td> <!-- drive_status -->
+
+        <td>
+            {% if job[10] == "Pending" %}
+                <a href="{{ url_for('update_job_status', drive_id=job[0], action='approve') }}"
+                   class="btn btn-approve">Approve</a>
+
+                <a href="{{ url_for('update_job_status', drive_id=job[0], action='reject') }}"
+                   class="btn btn-reject">Reject</a>
+            {% else %}
+                —
+            {% endif %}
         </td>
     </tr>
     {% endfor %}
 </table>
+{% else %}
+<p>No placement drives found.</p>
+{% endif %}
 
 <br>
-<a href="/admin/dashboard">Back to Dashboard</a>
+<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
 
 </body>
 </html>

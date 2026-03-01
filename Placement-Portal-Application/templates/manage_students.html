@@ -1,25 +1,112 @@
-@app.route("/admin/manage_companies")
-@admin_required
-def manage_companies():
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Students</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
 
-    search_query = request.args.get("search", "")
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
 
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+        table, th, td {
+            border: 1px solid #999;
+        }
 
-    if search_query:
-        cursor.execute("""
-            SELECT * FROM Company
-            WHERE name LIKE ?
-            OR email LIKE ?
-        """, (f"%{search_query}%", f"%{search_query}%"))
-    else:
-        cursor.execute("SELECT * FROM Company")
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
 
-    companies = cursor.fetchall()
-    conn.close()
+        th {
+            background-color: #e0e0e0;
+        }
 
-    return render_template("manage_companies.html",
-                           companies=companies,
-                           search_query=search_query)
+        .btn {
+            padding: 5px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .btn-blacklist {
+            background-color: red;
+            color: white;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Manage Students</h2>
+
+<!-- Search Form -->
+<div class="search-box">
+    <form method="GET" action="{{ url_for('manage_students') }}">
+        <input type="text"
+               name="search"
+               placeholder="Search by name, email, phone"
+               value="{{ search_query }}">
+        <button type="submit">Search</button>
+    </form>
+</div>
+
+{% if students %}
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Resume</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for student in students %}
+    <tr>
+        <td>{{ student["id"] }}</td>
+        <td>{{ student["full_name"] }}</td>
+        <td>{{ student["email"] }}</td>
+        <td>{{ student["phone"] or "N/A" }}</td>
+        <td>
+            {% if student["resume"] %}
+                {{ student["resume"] }}
+            {% else %}
+                Not Uploaded
+            {% endif %}
+        </td>
+        <td>
+            {% if student["is_blacklisted"] == 1 %}
+                Blacklisted
+            {% else %}
+                Active
+            {% endif %}
+        </td>
+        <td>
+            {% if student["is_blacklisted"] == 0 %}
+                <a href="{{ url_for('blacklist_student', student_id=student['id']) }}"
+                   class="btn btn-blacklist">
+                    Blacklist
+                </a>
+            {% else %}
+                —
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No students found.</p>
+{% endif %}
+
+<br>
+<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
+
+</body>
+</html>

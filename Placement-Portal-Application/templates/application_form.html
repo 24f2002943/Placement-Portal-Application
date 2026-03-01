@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apply for Drive</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+
+    <div class="card shadow">
+        <div class="card-body">
+
+            <h3 class="mb-3">
+                Apply for {{ drive['title'] }}
+            </h3>
+        
+            <p class="mb-1">
+                <strong>Company:</strong> {{ drive['company_name'] }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Location:</strong> {{ drive['location'] }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Deadline:</strong> {{ drive['deadline'] }}
+            </p>
+
+            <hr>
+
+            <form method="POST">
+
+                <!-- Related Work -->
+                <div class="mb-3">
+                    <label class="form-label"><strong>Related Work</strong></label>
+                    <textarea
+                        name="related_work"
+                        class="form-control"
+                        rows="4"
+                        required>{{ existing_application['related_work'] if existing_application else '' }}</textarea>
+                </div>
+
+                <!-- Related Projects -->
+                <div class="mb-3">
+                    <label class="form-label"><strong>Related Projects</strong></label>
+                    <textarea
+                        name="related_projects"
+                        class="form-control"
+                        rows="4"
+                        required>{{ existing_application['related_projects'] if existing_application else '' }}</textarea>
+                </div>
+
+                <!-- Job Fit Statement -->
+                <div class="mb-3">
+                    <label class="form-label"><strong>Why are you a good fit?</strong></label>
+                    <textarea
+                        name="job_fit_statement"
+                        class="form-control"
+                        rows="4"
+                        required>{{ existing_application['job_fit_statement'] if existing_application else '' }}</textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-flex justify-content-between">
+
+                    <a href="{{ url_for('student_dashboard') }}"
+                       class="btn btn-secondary">
+                        Back
+                    </a>
+
+                    <button type="submit" class="btn btn-primary">
+                        {{ "Update Application" if existing_application else "Submit Application" }}
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

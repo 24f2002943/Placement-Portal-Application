@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Applications</title>
+</head>
+<body>
+
+    <h2>Applications for: {{ job.title }}</h2>
+
+    <a href="{{ url_for('company_dashboard') }}">Back to Dashboard</a>
+
+    <br><br>
+
+    {% if applications %}
+        <table border="1" cellpadding="8">
+
+            <tr>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Applied At</th>
+                <th>Status</th>
+                <th>Resume</th>
+                <th>Update Status</th>
+            </tr>
+
+            {% for application in applications %}
+            <tr>
+                <td>{{ application.full_name }}</td>
+                <td>{{ application.email }}</td>
+                <td>{{ application.phone }}</td>
+                <td>{{ application.applied_at }}</td>
+                <td>{{ application.status }}</td>
+
+                <!-- Resume Snapshot -->
+                <td>
+                    {% if application.resume_snapshot_path %}
+                        <a href="{{ url_for('download_resume',
+                                             filename=application.resume_snapshot_path) }}">
+                            View Resume
+                        </a>
+                    {% else %}
+                        No Resume
+                    {% endif %}
+                </td>
+
+                <!-- Status Update -->
+                <td>
+
+                    {% if application.status != 'Placed' %}
+
+                    <form method="POST"
+                          action="{{ url_for('company_update_status',
+                                             application_id=application.id) }}">
+
+                        <select name="status">
+                            <option value="Applied">Applied</option>
+                            <option value="Shortlisted">Shortlisted</option>
+                            <option value="Interview">Interview</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Placed">Placed</option>
+                        </select>
+
+                        <button type="submit">Update</button>
+
+                    </form>
+
+                    {% else %}
+                        Finalized
+                    {% endif %}
+
+                </td>
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    {% else %}
+        <p>No applications yet.</p>
+    {% endif %}
+
+</body>
+</html>

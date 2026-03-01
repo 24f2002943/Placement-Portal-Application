@@ -2,22 +2,59 @@
 <html>
 <head>
     <title>Manage Companies</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #999;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e0e0e0;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .approve { background-color: green; color: white; }
+        .reject { background-color: red; color: white; }
+        .blacklist { background-color: black; color: white; }
+
+        .status-approved { color: green; font-weight: bold; }
+        .status-rejected { color: red; font-weight: bold; }
+        .status-pending { color: orange; font-weight: bold; }
+    </style>
 </head>
 <body>
 
 <h2>Manage Companies</h2>
 
-<!-- 🔍 Search Form -->
-<form method="GET">
-    <input type="text" name="search"
+<!-- Search Form -->
+<form method="GET" action="{{ url_for('manage_companies') }}">
+    <input type="text"
+           name="search"
            placeholder="Search by name or email"
            value="{{ search_query }}">
     <button type="submit">Search</button>
 </form>
 
-<br>
-
-<table border="1" cellpadding="10">
+{% if companies %}
+<table>
     <tr>
         <th>ID</th>
         <th>Company Name</th>
@@ -33,37 +70,47 @@
         <td>{{ company["name"] }}</td>
         <td>{{ company["email"] }}</td>
 
-        <td>{{ company["approval_status"] }}</td>
+        <td>
+            {% if company["approval_status"] == "Approved" %}
+                <span class="status-approved">Approved</span>
+            {% elif company["approval_status"] == "Rejected" %}
+                <span class="status-rejected">Rejected</span>
+            {% else %}
+                <span class="status-pending">Pending</span>
+            {% endif %}
+        </td>
 
         <td>
             {% if company["is_blacklisted"] == 1 %}
-                Blacklisted
+                <span style="color:red; font-weight:bold;">Blacklisted</span>
             {% else %}
                 Active
             {% endif %}
         </td>
 
         <td>
-            {% if company["approval_status"] != "Approved" %}
-                <a href="/admin/approve_company/{{ company['id'] }}">
-                    Approve
-                </a>
+            {% if company["approval_status"] == "Pending" %}
+                <a href="{{ url_for('approve_company', company_id=company['id']) }}"
+                   class="btn approve">Approve</a>
+
+                <a href="{{ url_for('reject_company', company_id=company['id']) }}"
+                   class="btn reject">Reject</a>
             {% endif %}
 
             {% if company["is_blacklisted"] == 0 %}
-                |
-                <a href="/admin/blacklist/company/{{ company['id'] }}">
-                    Blacklist
-                </a>
+                <a href="{{ url_for('blacklist_company', company_id=company['id']) }}"
+                   class="btn blacklist">Blacklist</a>
             {% endif %}
         </td>
     </tr>
     {% endfor %}
-
 </table>
+{% else %}
+<p>No companies found.</p>
+{% endif %}
 
 <br>
-<a href="/admin/dashboard">Back to Dashboard</a>
+<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
 
 </body>
 </html>

@@ -2,25 +2,135 @@
 <html>
 <head>
     <title>Company Dashboard</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+        h2 { margin-bottom: 20px; }
+
+        .summary-box {
+            display: inline-block;
+            padding: 15px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            width: 200px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td { border: 1px solid #999; }
+        th, td { padding: 10px; text-align: center; }
+        th { background-color: #e0e0e0; }
+
+        .btn {
+            padding: 6px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn-view { background-color: #007bff; color: white; }
+        .btn-close { background-color: #dc3545; color: white; }
+        .btn-open { background-color: #28a745; color: white; }
+        .btn-post { background-color: #343a40; color: white; padding: 8px 12px; }
+
+        .top-actions { margin-bottom: 20px; }
+    </style>
 </head>
 <body>
 
     <h2>Company Dashboard</h2>
 
-    <p>Welcome! Your account has been approved by Admin.</p>
+    <div class="top-actions">
+        <a href="{{ url_for('post_drive') }}" class="btn btn-post">
+            Post New Drive
+        </a>
+        &nbsp;
+        <a href="{{ url_for('logout') }}" class="btn btn-close">
+            Logout
+        </a>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-box">
+        <h3>Total Drives</h3>
+        <p>{{ total_jobs }}</p>
+    </div>
+
+    <div class="summary-box">
+        <h3>Active Drives</h3>
+        <p>{{ active_jobs }}</p>
+    </div>
+
+    <div class="summary-box">
+        <h3>Closed Drives</h3>
+        <p>{{ closed_jobs }}</p>
+    </div>
+
+    <div class="summary-box">
+        <h3>Total Applications</h3>
+        <p>{{ total_applications }}</p>
+    </div>
 
     <hr>
 
-    <h3>Options</h3>
+    <h3>Your Posted Drives</h3>
 
-    <ul>
-        <li>Post a Job (Coming Soon)</li>
-        <li>View Applicants (Coming Soon)</li>
-        <li>Edit Company Profile (Coming Soon)</li>
-    </ul>
+    {% if jobs %}
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Skills</th>
+            <th>Experience</th>
+            <th>Salary Range</th>
+            <th>Approval</th>
+            <th>Status</th>
+            <th>Applications</th>
+            <th>Action</th>
+        </tr>
 
-    <br>
-    <a href="/logout">Logout</a>
-    <a href="/company/post_job">Post New Job</a>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job.title }}</td>
+            <td>{{ job.location }}</td>
+            <td>{{ job.required_skills }}</td>
+            <td>{{ job.experience_required }}</td>
+            <td>{{ job.min_salary }} - {{ job.max_salary }}</td>
+            <td>{{ job.approval_status }}</td>
+            <td>{{ job.drive_status }}</td>
+
+            <td>
+                <a href="{{ url_for('view_job_applications', drive_id=job.id) }}"
+                   class="btn btn-view">
+                    View
+                </a>
+            </td>
+
+            <td>
+                {% if job.drive_status == 'Active' %}
+                    <a href="{{ url_for('toggle_drive_status',  drive_id=job.id) }}"
+                       class="btn btn-close">
+                        Close
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('toggle_drive_status',  drive_id=job.id) }}"
+                       class="btn btn-open">
+                        Activate
+                    </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p>No drives posted yet.</p>
+    {% endif %}
+
 </body>
 </html>

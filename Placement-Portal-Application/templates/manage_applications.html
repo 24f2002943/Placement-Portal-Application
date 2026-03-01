@@ -11,18 +11,18 @@
     <tr>
         <th>ID</th>
         <th>Student</th>
-        <th>Job</th>
+        <th>Placement Drive</th>
         <th>Status</th>
     </tr>
 
     {% for app in applications %}
-<tr>
-    <td>{{ app["id"] }}</td>
-    <td>{{ app["student_name"] }}</td>
-    <td>{{ app["job_title"] }}</td>
-    <td>{{ app["status"] }}</td>
-</tr>
-{% endfor %}
+    <tr>
+        <td>{{ app["id"] }}</td>
+        <td>{{ app["student_name"] }}</td>
+        <td>{{ app["drive_title"] }}</td>
+        <td>{{ app["status"] }}</td>
+    </tr>
+    {% endfor %}
 </table>
 
 <br>

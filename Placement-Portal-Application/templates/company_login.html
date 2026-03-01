@@ -5,20 +5,40 @@
 </head>
 <body>
 
-    <h2>Company Login</h2>
+<h2>Company Login</h2>
 
-    <form method="POST">
-        <label>Email:</label><br>
-        <input type="email" name="email" required><br><br>
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+      <p style="color:red;">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-        <label>Password:</label><br>
-        <input type="password" name="password" required><br><br>
+<form method="POST" action="{{ url_for('company_login') }}">
 
-        <button type="submit">Login</button>
-    </form>
+    <label>Email:</label><br>
+    <input type="email" name="email" required><br><br>
 
-    <br>
-    <a href="/company/register">New Company? Register</a>
+    <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <button type="submit">Login</button>
+
+</form>
+
+<br>
+
+<a href="{{ url_for('company_register') }}">
+    New Company? Register Here
+</a>
+
+<br><br>
+
+<a href="{{ url_for('home') }}">
+    Back to Home
+</a>
 
 </body>
 </html>

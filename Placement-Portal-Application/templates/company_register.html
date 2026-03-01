@@ -5,23 +5,44 @@
 </head>
 <body>
 
-    <h2>Company Registration</h2>
+<h2>Company Registration</h2>
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+      <p>{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-    <form method="POST">
-        <label>Company Name:</label><br>
-        <input type="text" name="name" required><br><br>
+<form method="POST">
 
-        <label>Email:</label><br>
-        <input type="email" name="email" required><br><br>
+    <label>Company Name:</label><br>
+    <input type="text" name="name" required><br><br>
 
-        <label>Password:</label><br>
-        <input type="password" name="password" required><br><br>
+    <label>Email:</label><br>
+    <input type="email" name="email" required><br><br>
 
-        <button type="submit">Register</button>
-    </form>
+    <label>Location:</label><br>
+    <input type="text" name="location" required><br><br>
 
-    <br>
-    <a href="/company/login">Already Registered? Login</a>
+    <!-- ADD THIS BLOCK HERE -->
+    <label>Industry:</label><br>
+    <input type="text" name="industry" required><br><br>
+    <!-- END BLOCK -->
+
+    <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <button type="submit">Register</button>
+
+</form>
+
+<br>
+
+<a href="{{ url_for('company_login') }}">
+    Already Registered? Login
+</a>
 
 </body>
 </html>

@@ -8,6 +8,7 @@
     <h2>Student Registration</h2>
 
     <form method="POST">
+
         <label>Full Name:</label><br>
         <input type="text" name="full_name" required><br><br>
 
@@ -18,10 +19,11 @@
         <input type="password" name="password" required><br><br>
 
         <button type="submit">Register</button>
+
     </form>
 
     <br>
-    <a href="/student/login">Already Registered? Login</a>
+    <a href="{{ url_for('student_login') }}">Already have an account? Login</a>
 
 </body>
 </html>
