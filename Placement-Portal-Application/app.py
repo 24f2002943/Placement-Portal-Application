@@ -921,6 +921,7 @@ def student_login():
 
     return render_template("student_login.html")
 
+# Student dashboard with search and filtering
 @app.route("/student/dashboard")
 @student_required
 def student_dashboard():
