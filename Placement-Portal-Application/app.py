@@ -6,6 +6,7 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 from werkzeug.utils import secure_filename
+from flask import jsonify
 
 def get_db_connection():
     conn = get_db_connection()
@@ -1254,6 +1255,181 @@ def apply_drive(drive_id):
 def logout():
     session.clear()
     return redirect(url_for("home"))
+
+#===============================
+#API SECTION (JSON BASED)
+#=============================
+
+#GET all students
+@app.route("/api/students", methods=["GET"])
+def api_get_students():
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, full_name, email, degree, branch FROM Student")
+    students = cursor.fetchall()
+    conn.close()
+
+    return jsonify([dict(row) for row in students])
+
+
+#GET single student
+@app.route("/api/students/<int:student_id>", methods=["GET"])
+def api_get_student(student_id):
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Student WHERE id=?", (student_id,))
+    student = cursor.fetchone()
+    conn.close()
+
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+
+    return jsonify(dict(student))
+
+#POST create student
+@app.route("/api/students", methods=["POST"])
+def api_create_student():
+
+    data = request.get_json()
+
+    full_name = data.get("full_name")
+    email = data.get("email")
+    password = data.get("password")
+
+    if not full_name or not email or not password:
+        return jsonify({"error": "Missing fields"}), 400
+
+    hashed_password = generate_password_hash(password)
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO Student (full_name, email, password_hash, is_blacklisted)
+            VALUES (?, ?, ?, 0)
+        """, (full_name, email, hashed_password))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Student created"}), 201
+
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"error": "Email already exists"}), 400
+    
+#PUT update student
+@app.route("/api/students/<int:student_id>", methods=["PUT"])
+def api_update_student(student_id):
+
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE Student
+        SET full_name=?, phone=?, degree=?, branch=?, college=?, cgpa=?, skills=?
+        WHERE id=?
+    """, (
+        data.get("full_name"),
+        data.get("phone"),
+        data.get("degree"),
+        data.get("branch"),
+        data.get("college"),
+        data.get("cgpa"),
+        data.get("skills"),
+        student_id
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Student updated"})
+
+#DELETE student
+@app.route("/api/students/<int:student_id>", methods=["DELETE"])
+def api_delete_student(student_id):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM Student WHERE id=?", (student_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Student deleted"})
+
+#PLACEMENT DRIVE API
+#GET drives
+@app.route("/api/drives", methods=["GET"])
+def api_get_drives():
+
+    status = request.args.get("status")
+    location = request.args.get("location")
+    search = request.args.get("search")
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, title, location, required_skills,
+               approval_status, drive_status
+        FROM PlacementDrive
+        WHERE approval_status = 'Approved'
+    """
+
+    params = []
+
+    if status:
+        query += " AND drive_status = ?"
+        params.append(status)
+
+    if location:
+        query += " AND location LIKE ?"
+        params.append(f"%{location}%")
+
+    if search:
+        query += " AND (title LIKE ? OR required_skills LIKE ?)"
+        params.append(f"%{search}%")
+        params.append(f"%{search}%")
+
+    cursor.execute(query, params)
+    drives = cursor.fetchall()
+    conn.close()
+
+    return jsonify([dict(row) for row in drives])
+
+#APPLICATION API
+@app.route("/api/applications", methods=["GET"])
+def api_get_applications():
+
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT Application.id,
+               Student.full_name,
+               PlacementDrive.title,
+               Application.status
+        FROM Application
+        JOIN Student ON Application.student_id = Student.id
+        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
+    """)
+
+    applications = cursor.fetchall()
+    conn.close()
+
+    return jsonify([dict(row) for row in applications])
 
 
 
