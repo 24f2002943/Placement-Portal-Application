@@ -46,6 +46,7 @@ border-radius:5px;
 
 </div>
 
+
 <div class="row text-center mb-4">
 
 <div class="col-md-3">
@@ -93,20 +94,20 @@ border-radius:5px;
 
 <table class="table table-bordered table-striped">
 
+<thead>
 <tr>
-
-
 <th>Title</th>
 <th>Location</th>
 <th>Skills</th>
-
-
 <th>Status</th>
 <th>Applications</th>
 <th>Action</th>
-
-
 </tr>
+</thead>
+
+<tbody>
+
+{% if jobs %}
 
 {% for job in jobs %}
 
@@ -141,13 +142,26 @@ border-radius:5px;
 
 {% endfor %}
 
+{% else %}
+
+<tr>
+<td colspan="6">No drives posted yet.</td>
+</tr>
+
+{% endif %}
+
+</tbody>
+
 </table>
 
 </div>
 
 <hr>
 
+
 <h4>Applications Per Drive</h4>
+
+{% if drive_chart %}
 
 {% for item in drive_chart %}
 
@@ -161,9 +175,19 @@ border-radius:5px;
 
 {% endfor %}
 
+{% else %}
+
+<p>No application data available.</p>
+
+{% endif %}
+
+
 <hr>
 
+
 <h4>Status Distribution</h4>
+
+{% if status_chart %}
 
 {% for item in status_chart %}
 
@@ -176,6 +200,12 @@ border-radius:5px;
 <br>
 
 {% endfor %}
+
+{% else %}
+
+<p>No status data available.</p>
+
+{% endif %}
 
 </div>
 

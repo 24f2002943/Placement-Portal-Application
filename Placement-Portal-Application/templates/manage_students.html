@@ -75,8 +75,10 @@
         <td>{{ student["email"] }}</td>
         <td>{{ student["phone"] or "N/A" }}</td>
         <td>
-            {% if student["resume"] %}
-                {{ student["resume"] }}
+            {% if student["resume_path"] %}
+                <a href="{{ url_for('download_resume', filename=student['resume_path']) }}">
+                   View Resume
+                </a>
             {% else %}
                 Not Uploaded
             {% endif %}

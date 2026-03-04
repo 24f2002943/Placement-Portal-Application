@@ -25,6 +25,31 @@
 
 </div>
 
+
+<!-- ================= PLACEMENT MESSAGE ================= -->
+
+{% if placement_info %}
+
+<div class="alert alert-success text-center">
+
+<h4>🎉 Congratulations {{ student_name }}!</h4>
+
+<p>
+You have been placed at
+<strong>{{ placement_info.company_name }}</strong>
+for the role of
+<strong>{{ placement_info.title }}</strong>.
+</p>
+
+</div>
+
+{% endif %}
+
+
+<!-- ================= AVAILABLE DRIVES ================= -->
+
+{% if not placement_info %}
+
 <h4>Available Drives</h4>
 
 <div class="table-responsive">
@@ -64,7 +89,13 @@ Apply
 
 </div>
 
+{% endif %}
+
+
 <hr>
+
+
+<!-- ================= APPLICATION STATUS ================= -->
 
 <h4>Your Applications</h4>
 
@@ -83,7 +114,28 @@ Apply
 
 <td>{{ app.company_name }}</td>
 <td>{{ app.title }}</td>
-<td>{{ app.status }}</td>
+
+<td>
+
+{% if app.status == "Placed" %}
+<span class="badge bg-success">Placed</span>
+
+{% elif app.status == "Shortlisted" %}
+<span class="badge bg-warning text-dark">Shortlisted</span>
+
+{% elif app.status == "Interview" %}
+<span class="badge bg-info">Interview</span>
+
+{% elif app.status == "Rejected" %}
+<span class="badge bg-danger">Rejected</span>
+
+{% else %}
+<span class="badge bg-secondary">{{ app.status }}</span>
+
+{% endif %}
+
+</td>
+
 <td>{{ app.applied_at }}</td>
 
 </tr>

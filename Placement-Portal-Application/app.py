@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -10,9 +11,42 @@ from flask import jsonify
 
 import sqlite3
 
+from datetime import timedelta
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.config["SECRET_KEY"] = "supersecretkey"
+
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=5)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "home"
+
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_TYPE"] = "filesystem"
+
+from functools import wraps
+from flask_login import current_user
+
+def role_required(role):
+
+    def decorator(func):
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+
+            if not current_user.is_authenticated:
+                return redirect(url_for("home"))
+
+            if current_user.role != role:
+                return "Unauthorized Access", 403
+
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
 
 DB_NAME = "placement_portal.db"
 
@@ -21,6 +55,54 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+# ==============================
+# FLASK LOGIN USER MODEL
+# ==============================
+
+class User(UserMixin):
+
+    def __init__(self, user_id, role):
+        self.id = str(user_id)
+        self.role = role
+
+    def get_id(self):
+        return f"{self.role}:{self.id}"
+    
+@login_manager.user_loader
+def load_user(user_key):
+
+    if not user_key or ":" not in user_key:
+        return None
+
+    role, user_id = user_key.split(":", 1)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if role == "admin":
+        cursor.execute("SELECT id FROM Admin WHERE id=?", (user_id,))
+        if cursor.fetchone():
+            conn.close()
+            return User(user_id, "admin")
+
+    if role == "company":
+        cursor.execute("SELECT id FROM Company WHERE id=?", (user_id,))
+        if cursor.fetchone():
+            conn.close()
+            return User(user_id, "company")
+
+    if role == "student":
+        cursor.execute("SELECT id FROM Student WHERE id=?", (user_id,))
+        if cursor.fetchone():
+            conn.close()
+            return User(user_id, "student")
+
+    conn.close()
+    return None
+
+
 
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
@@ -42,50 +124,27 @@ def allowed_file(filename):
 
 DB_NAME = "placement_portal.db"
 
-
-
-
-# ==================================================
-# ROLE DECORATORS
-# ==================================================
-
-def student_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "student_id" not in session:
-            return redirect(url_for("student_login"))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def company_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "company_id" not in session:
-            return redirect(url_for("company_login"))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "admin" not in session:
-            return redirect(url_for("admin_login"))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-
-
 from flask import send_from_directory
 
 @app.route("/resume/<filename>")
-@company_required
+@login_required
 def download_resume(filename):
 
-    upload_folder = "uploads"
-    return send_from_directory(upload_folder, filename)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT resume_path FROM Student WHERE resume_path=?",
+        (filename,)
+    )
+
+    file = cursor.fetchone()
+    conn.close()
+
+    if not file:
+        return "File not found", 404
+
+    return send_from_directory("uploads", filename)
 
 
 # ==================================================
@@ -103,45 +162,57 @@ def home():
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
 
-        print("Entered Username:", username)
-        print("Entered Password:", password)
+    if request.method == "POST":
+
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not username or not password:
+            flash("Enter username and password", "danger")
+            return redirect(url_for("admin_login"))
 
         conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM Admin WHERE username = ?", (username,))
+        cursor.execute("""
+            SELECT *
+            FROM Admin
+            WHERE username = ?
+        """, (username,))
+
         admin = cursor.fetchone()
+
+        if not admin:
+            conn.close()
+            flash("Invalid credentials", "danger")
+            return redirect(url_for("admin_login"))
+
+        if not check_password_hash(admin["password_hash"], password):
+            conn.close()
+            flash("Invalid credentials", "danger")
+            return redirect(url_for("admin_login"))
+
+        # Flask-Login authentication
+        user = User(admin["id"], "admin")
+        login_user(user, remember=True)
+        session.permanent = True
+
         conn.close()
 
-        print("Admin from DB:", admin)
-
-        if admin:
-            print("Stored Hash:", admin[2])
-            print("Password Match:",
-                  check_password_hash(admin[2], password))
-
-        if admin and check_password_hash(admin[2], password):
-            session.clear()
-            session["admin"] = admin[0]
-
-            print("Session after login:", dict(session))
-
-            return redirect(url_for("admin_dashboard"))
-
-        print("Login Failed")
-        return "Invalid credentials"
+        return redirect(url_for("admin_dashboard"))
 
     return render_template("admin_login.html")
 
-
 @app.route("/admin/dashboard")
-@admin_required
+@login_required
 def admin_dashboard():
-
+    
+    if current_user.role != "admin":
+        logout_user()
+        return redirect(url_for("admin_login"))
+     
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -214,7 +285,7 @@ def admin_dashboard():
 
 #----------- MANAGE STUDENTS ----------------
 @app.route("/admin/manage_students")
-@admin_required
+@login_required
 def manage_students():
 
     search_query = request.args.get("search", "").strip()
@@ -248,7 +319,7 @@ def manage_students():
     )
 
 @app.route("/admin/blacklist/student/<int:student_id>")
-@admin_required
+@login_required
 def blacklist_student(student_id):
 
     conn = get_db_connection()
@@ -269,7 +340,7 @@ def blacklist_student(student_id):
 # ---------------- MANAGE COMPANIES ----------------
 
 @app.route("/admin/manage_companies")
-@admin_required
+@login_required
 def manage_companies():
 
     search_query = request.args.get("search", "").strip()
@@ -351,7 +422,7 @@ def reject_company(company_id):
 
 
 @app.route("/admin/blacklist/company/<int:company_id>")
-@admin_required
+@login_required
 def blacklist_company(company_id):
 
     conn = get_db_connection()
@@ -367,7 +438,7 @@ def blacklist_company(company_id):
 
 #------------ MANAGE JOBS ----------------
 @app.route("/admin/manage_jobs")
-@admin_required
+@login_required
 def manage_jobs():
 
     search_query = request.args.get("search", "").strip()
@@ -411,7 +482,7 @@ def manage_jobs():
 
 
 @app.route("/admin/job/<int:drive_id>/<string:action>")
-@admin_required
+@login_required
 def update_job_status(drive_id, action):
 
     conn = get_db_connection()
@@ -431,7 +502,7 @@ def update_job_status(drive_id, action):
 # ---------------- MANAGE APPLICATIONS ----------------
 
 @app.route("/admin/manage_applications")
-@admin_required
+@login_required
 def manage_applications():
 
     search_query = request.args.get("search", "").strip()
@@ -562,21 +633,16 @@ def company_login():
 
         company = cursor.fetchone()
 
-
-
-
         if not company:
             conn.close()
             flash("Invalid email or password.", "danger")
             return redirect(url_for("company_login"))
 
-        # Check blacklist
         if company["is_blacklisted"] == 1:
             conn.close()
-            flash("Your company account has been blacklisted. Contact admin.", "danger")
+            flash("Your company account has been blacklisted.", "danger")
             return redirect(url_for("company_login"))
 
-        # Check approval status
         if company["approval_status"] == "Pending":
             conn.close()
             flash("Your account is pending admin approval.", "warning")
@@ -584,16 +650,15 @@ def company_login():
 
         if company["approval_status"] == "Rejected":
             conn.close()
-            flash("Your registration has been rejected by admin.", "danger")
+            flash("Your registration was rejected by admin.", "danger")
             return redirect(url_for("company_login"))
 
-        # Verify password
         if not check_password_hash(company["password_hash"], password):
             conn.close()
             flash("Invalid email or password.", "danger")
             return redirect(url_for("company_login"))
 
-        # Update last login time
+        # update last login
         cursor.execute("""
             UPDATE Company
             SET updated_at = CURRENT_TIMESTAMP
@@ -603,25 +668,28 @@ def company_login():
         conn.commit()
         conn.close()
 
-        # Set session
-        session.clear()
-        session["company_id"] = company["id"]
-        session["company_name"] = company["name"]
-
-        print("Company session after login:", dict(session)) 
+        # Flask-Login authentication
+        user = User(company["id"], "company")
+        login_user(user, remember=True)
+        session.permanent = True
 
         flash("Login successful!", "success")
-         # DEBUG LINE
+
         return redirect(url_for("company_dashboard"))
-    
+
     return render_template("company_login.html")
 
 
 @app.route("/company/dashboard")
-@company_required
+@login_required
 def company_dashboard():
+    
 
-    company_id = session["company_id"]
+    if current_user.role != "company":
+        return redirect(url_for("company_login"))
+
+    
+    company_id = int(current_user.id)
     filter_type = request.args.get("filter")
 
     conn = get_db_connection()
@@ -747,10 +815,10 @@ def company_dashboard():
     )
 
 @app.route("/company/post_drive", methods=["GET", "POST"])
-@company_required
+@login_required
 def post_drive():
 
-    company_id = session["company_id"]
+    company_id = int(current_user.id)
 
     if request.method == "POST":
         title = request.form["title"]
@@ -805,10 +873,13 @@ def post_drive():
 
 
 @app.route("/company/drive/<int:drive_id>/applications")
-@company_required
+@login_required
 def view_job_applications(drive_id):
 
-    company_id = session["company_id"]
+    if current_user.role != "company":
+        return redirect(url_for("company_login"))
+
+    company_id = int(current_user.id)
 
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
@@ -855,10 +926,10 @@ def view_job_applications(drive_id):
 
 
 @app.route("/company/drive/<int:drive_id>/toggle")
-@company_required
+@login_required
 def toggle_drive_status(drive_id):
 
-    company_id = session["company_id"]
+    company_id = int(current_user.id)
 
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
@@ -893,10 +964,10 @@ def toggle_drive_status(drive_id):
 
 
 @app.route("/company/application/<int:application_id>/<string:new_status>")
-@company_required
+@login_required
 def update_application_status(application_id, new_status):
 
-    company_id = session["company_id"]
+    company_id = int(current_user.id)
     allowed_status = ["Shortlisted", "Selected", "Rejected"]
 
     if new_status not in allowed_status:
@@ -951,10 +1022,10 @@ def update_application_status(application_id, new_status):
 @app.route("/company/update_status/<int:application_id>", methods=["POST"])
 def company_update_status(application_id):
 
-    if "company_id" not in session:
+    if current_user.role != "company":
         return redirect(url_for("company_login"))
 
-    company_id = session["company_id"]
+    company_id = int(current_user.id)
 
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
@@ -1120,10 +1191,10 @@ def student_login():
         if not check_password_hash(stored_password, password):
             return "Invalid Credentials"
 
-        session.clear()
-        session["student_id"] = student_id
-
-        print("Student session:", dict(session))
+        user = User(student_id, "student")
+        login_user(user, remember=True)
+        session.permanent = True
+            
 
         return redirect(url_for("student_dashboard"))
 
@@ -1131,10 +1202,13 @@ def student_login():
 
 # Student dashboard with search and filtering
 @app.route("/student/dashboard")
-@student_required
+@login_required
 def student_dashboard():
-
-    student_id = session["student_id"]
+    
+    if current_user.role != "student":
+        return redirect(url_for("student_login"))
+    
+    student_id = int(current_user.id)
     search = request.args.get("search", "").strip()
 
     conn = get_db_connection()
@@ -1248,10 +1322,10 @@ def student_dashboard():
 # - Status lifecycle: Applied -> Shortlisted -> Interview -> Placed/Rejected
 
 @app.route("/student/profile", methods=["GET", "POST"])
-@student_required
+@login_required
 def student_profile():
 
-    student_id = session["student_id"]
+    student_id = int(current_user.id)
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -1351,10 +1425,10 @@ def student_profile():
 
 
 @app.route("/student/apply/<int:drive_id>", methods=["GET", "POST"])
-@student_required
+@login_required
 def apply_drive(drive_id):
 
-    student_id = session["student_id"]
+    student_id = int(current_user.id)
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -1475,9 +1549,12 @@ def apply_drive(drive_id):
 # ==================================================
 
 @app.route("/logout")
+@login_required
 def logout():
+    logout_user()
     session.clear()
     return redirect(url_for("home"))
+
 
 #===============================
 #API SECTION (JSON BASED)
