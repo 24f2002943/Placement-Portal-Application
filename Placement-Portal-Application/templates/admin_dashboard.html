@@ -1,143 +1,218 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Dashboard</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Admin Dashboard</title>
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-        body {
-            background:#f4f4f4;
-            padding:20px;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        .card-box {
-            border-radius:10px;
-            box-shadow:0 4px 8px rgba(0,0,0,0.1);
-        }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        canvas {
-            background:white;
-            padding:20px;
-            border-radius:10px;
-            box-shadow:0 4px 8px rgba(0,0,0,0.1);
-        }
-    </style>
+<style>
+
+body{
+background:#f4f4f4;
+}
+
+.card-box{
+border-radius:10px;
+box-shadow:0 4px 8px rgba(0,0,0,0.1);
+}
+
+.chart-box{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 8px rgba(0,0,0,0.1);
+margin-bottom:30px;
+}
+
+</style>
+
 </head>
+
+
 <body>
 
-<h1 class="text-center mb-4">Admin Dashboard</h1>
+<div class="container mt-4">
 
-<!-- ================= KPI CARDS ================= -->
+<div class="d-flex justify-content-between align-items-center mb-4">
 
-<div class="container text-center">
-    <div class="row justify-content-center">
+<h2>Admin Dashboard</h2>
 
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ companies }}</h4>
-            <p>Total Companies</p>
-        </div>
+<a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
 
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ students }}</h4>
-            <p>Total Students</p>
-        </div>
-
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ jobs }}</h4>
-            <p>Total Jobs</p>
-        </div>
-
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ applications }}</h4>
-            <p>Total Applications</p>
-        </div>
-
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ placements }}</h4>
-            <p>Total Placements</p>
-        </div>
-
-        <div class="col-md-2 card p-3 m-2 card-box">
-            <h4>{{ placement_rate }}%</h4>
-            <p>Placement Rate</p>
-        </div>
-
-    </div>
 </div>
 
-<!-- ================= MENU ================= -->
+
+<!-- KPI CARDS -->
+
+<div class="row text-center g-3">
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ companies }}</h4>
+<p>Total Companies</p>
+</div>
+</div>
+</div>
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ students }}</h4>
+<p>Total Students</p>
+</div>
+</div>
+</div>
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ jobs }}</h4>
+<p>Total Jobs</p>
+</div>
+</div>
+</div>
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ applications }}</h4>
+<p>Total Applications</p>
+</div>
+</div>
+</div>
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ placements }}</h4>
+<p>Total Placements</p>
+</div>
+</div>
+</div>
+
+<div class="col-md-2 col-sm-6">
+<div class="card card-box">
+<div class="card-body">
+<h4>{{ placement_rate }}%</h4>
+<p>Placement Rate</p>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<!-- ADMIN ACTIONS -->
 
 <div class="text-center mt-4">
-    <a class="btn btn-primary m-1" href="/admin/manage_companies">Manage Companies</a>
-    <a class="btn btn-primary m-1" href="/admin/manage_students">Manage Students</a>
-    <a class="btn btn-primary m-1" href="/admin/manage_jobs">Manage Jobs</a>
-    <a class="btn btn-primary m-1" href="/admin/manage_applications">Manage Applications</a>
+
+<a class="btn btn-primary m-1" href="{{ url_for('manage_companies') }}">
+Manage Companies
+</a>
+
+<a class="btn btn-primary m-1" href="{{ url_for('manage_students') }}">
+Manage Students
+</a>
+
+<a class="btn btn-primary m-1" href="{{ url_for('manage_jobs') }}">
+Manage Jobs
+</a>
+
+<a class="btn btn-primary m-1" href="{{ url_for('manage_applications') }}">
+Manage Applications
+</a>
+
 </div>
+
 
 <hr class="mt-5">
 
-<!-- ================= CHARTS SECTION ================= -->
 
-<div class="container mt-5">
+<!-- CHARTS -->
 
-    <h3 class="text-center mb-4">Overall System Statistics</h3>
-    <canvas id="adminBarChart" height="100"></canvas>
+<div class="chart-box">
 
-    <h3 class="text-center mt-5 mb-4">Company Approval Status</h3>
-    <canvas id="companyChart" height="100"></canvas>
+<h4 class="text-center mb-4">Overall System Statistics</h4>
 
-    <h3 class="text-center mt-5 mb-4">Application Status Distribution</h3>
-    <canvas id="applicationChart" height="100"></canvas>
+<canvas id="adminBarChart"></canvas>
 
 </div>
 
+
+<div class="chart-box">
+
+<h4 class="text-center mb-4">Company Approval Status</h4>
+
+<canvas id="companyChart"></canvas>
+
+</div>
+
+
+<div class="chart-box">
+
+<h4 class="text-center mb-4">Application Status Distribution</h4>
+
+<canvas id="applicationChart"></canvas>
+
+</div>
+
+
+</div>
+
+
 <script>
-    const adminLabels = {{ admin_labels | tojson }};
-    const adminCounts = {{ admin_counts | tojson }};
 
-    new Chart(document.getElementById('adminBarChart'), {
-        type: 'bar',
-        data: {
-            labels: adminLabels,
-            datasets: [{
-                label: 'Count',
-                data: adminCounts,
-                backgroundColor: ['#007bff','#28a745','#ffc107']
-            }]
-        }
-    });
+const adminLabels = {{ admin_labels | tojson }};
+const adminCounts = {{ admin_counts | tojson }};
 
-    const companyLabels = {{ company_labels | tojson }};
-    const companyCounts = {{ company_counts | tojson }};
+new Chart(document.getElementById("adminBarChart"),{
+type:"bar",
+data:{
+labels:adminLabels,
+datasets:[{
+label:"Count",
+data:adminCounts,
+backgroundColor:["#007bff","#28a745","#ffc107"]
+}]
+}
+});
 
-    new Chart(document.getElementById('companyChart'), {
-        type: 'pie',
-        data: {
-            labels: companyLabels,
-            datasets: [{
-                data: companyCounts,
-                backgroundColor: ['#28a745','#dc3545','#ffc107']
-            }]
-        }
-    });
 
-    const applicationLabels = {{ application_labels | tojson }};
-    const applicationCounts = {{ application_counts | tojson }};
+const companyLabels = {{ company_labels | tojson }};
+const companyCounts = {{ company_counts | tojson }};
 
-    new Chart(document.getElementById('applicationChart'), {
-        type: 'pie',
-        data: {
-            labels: applicationLabels,
-            datasets: [{
-                data: applicationCounts,
-                backgroundColor: ['#007bff','#ffc107','#28a745','#dc3545']
-            }]
-        }
-    });
+new Chart(document.getElementById("companyChart"),{
+type:"pie",
+data:{
+labels:companyLabels,
+datasets:[{
+data:companyCounts,
+backgroundColor:["#28a745","#dc3545","#ffc107"]
+}]
+}
+});
+
+
+const applicationLabels = {{ application_labels | tojson }};
+const applicationCounts = {{ application_counts | tojson }};
+
+new Chart(document.getElementById("applicationChart"),{
+type:"pie",
+data:{
+labels:applicationLabels,
+datasets:[{
+data:applicationCounts,
+backgroundColor:["#007bff","#ffc107","#28a745","#dc3545"]
+}]
+}
+});
+
 </script>
 
 </body>

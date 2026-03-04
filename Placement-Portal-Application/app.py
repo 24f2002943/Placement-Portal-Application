@@ -370,19 +370,44 @@ def blacklist_company(company_id):
 @admin_required
 def manage_jobs():
 
+    search_query = request.args.get("search", "").strip()
+
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT PlacementDrive.*, Company.name
-        FROM PlacementDrive
-        JOIN Company ON PlacementDrive.company_id = Company.id
-    """)
+    if search_query:
+
+        cursor.execute("""
+            SELECT PlacementDrive.*, Company.name
+            FROM PlacementDrive
+            JOIN Company ON PlacementDrive.company_id = Company.id
+            WHERE PlacementDrive.title LIKE ?
+            OR PlacementDrive.location LIKE ?
+            OR Company.name LIKE ?
+        """, (
+            f"%{search_query}%",
+            f"%{search_query}%",
+            f"%{search_query}%"
+        ))
+
+    else:
+
+        cursor.execute("""
+            SELECT PlacementDrive.*, Company.name
+            FROM PlacementDrive
+            JOIN Company ON PlacementDrive.company_id = Company.id
+        """)
 
     jobs = cursor.fetchall()
+
     conn.close()
 
-    return render_template("manage_jobs.html", jobs=jobs)
+    return render_template(
+        "manage_jobs.html",
+        jobs=jobs,
+        search_query=search_query
+    )
 
 
 @app.route("/admin/job/<int:drive_id>/<string:action>")
@@ -409,24 +434,50 @@ def update_job_status(drive_id, action):
 @admin_required
 def manage_applications():
 
+    search_query = request.args.get("search", "").strip()
+
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT Application.id,
-               Application.status,
-               Student.full_name AS student_name,
-               PlacementDrive.title AS drive_title
-        FROM Application
-        JOIN Student ON Application.student_id = Student.id
-        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-    """)
+    if search_query:
+
+        cursor.execute("""
+            SELECT Application.id,
+                   Application.status,
+                   Student.full_name AS student_name,
+                   PlacementDrive.title AS drive_title
+            FROM Application
+            JOIN Student ON Application.student_id = Student.id
+            JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
+            WHERE Student.full_name LIKE ?
+            OR PlacementDrive.title LIKE ?
+        """, (
+            f"%{search_query}%",
+            f"%{search_query}%"
+        ))
+
+    else:
+
+        cursor.execute("""
+            SELECT Application.id,
+                   Application.status,
+                   Student.full_name AS student_name,
+                   PlacementDrive.title AS drive_title
+            FROM Application
+            JOIN Student ON Application.student_id = Student.id
+            JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
+        """)
 
     applications = cursor.fetchall()
+
     conn.close()
 
-    return render_template("manage_applications.html", applications=applications)
+    return render_template(
+        "manage_applications.html",
+        applications=applications,
+        search_query=search_query
+    )
 
 
 # ==================================================

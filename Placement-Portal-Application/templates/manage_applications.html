@@ -7,6 +7,25 @@
 
 <h2>Manage Applications</h2>
 
+<form method="GET" class="mb-3">
+
+<div class="input-group">
+
+<input
+type="text"
+name="search"
+class="form-control"
+placeholder="Search by student name or job title"
+value="{{ search_query }}">
+
+<button class="btn btn-primary">
+Search
+</button>
+
+</div>
+
+</form>
+
 <table border="1" cellpadding="10">
     <tr>
         <th>ID</th>
