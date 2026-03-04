@@ -1,83 +1,198 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Applications</title>
+<title>Applications</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:30px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+table,th,td{
+border:1px solid #999;
+}
+
+th,td{
+padding:10px;
+text-align:center;
+}
+
+th{
+background:#e0e0e0;
+}
+
+.details{
+text-align:left;
+background:#f8f8f8;
+}
+
+.btn{
+padding:6px 10px;
+border-radius:4px;
+border:none;
+background:#007bff;
+color:white;
+cursor:pointer;
+}
+
+select{
+padding:4px;
+}
+
+.back{
+display:inline-block;
+margin-bottom:20px;
+text-decoration:none;
+color:#333;
+font-weight:bold;
+}
+
+</style>
+
 </head>
+
 <body>
 
-    <h2>Applications for: {{ job.title }}</h2>
+<h2>Applications for: {{ job.title }}</h2>
 
-    <a href="{{ url_for('company_dashboard') }}">Back to Dashboard</a>
+<a href="{{ url_for('company_dashboard') }}" class="back">
+← Back to Dashboard
+</a>
 
-    <br><br>
+{% if applications %}
 
-    {% if applications %}
-        <table border="1" cellpadding="8">
+<table>
 
-            <tr>
-                <th>Student Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Applied At</th>
-                <th>Status</th>
-                <th>Resume</th>
-                <th>Update Status</th>
-            </tr>
+<tr>
+<th>Student Name</th>
+<th>Email</th>
+<th>Phone</th>
+<th>Applied At</th>
+<th>Status</th>
+<th>Resume</th>
+<th>Update Status</th>
+</tr>
 
-            {% for application in applications %}
-            <tr>
-                <td>{{ application.full_name }}</td>
-                <td>{{ application.email }}</td>
-                <td>{{ application.phone }}</td>
-                <td>{{ application.applied_at }}</td>
-                <td>{{ application.status }}</td>
+{% for application in applications %}
 
-                <!-- Resume Snapshot -->
-                <td>
-                    {% if application.resume_snapshot_path %}
-                        <a href="{{ url_for('download_resume',
-                                             filename=application.resume_snapshot_path) }}">
-                            View Resume
-                        </a>
-                    {% else %}
-                        No Resume
-                    {% endif %}
-                </td>
+<tr>
 
-                <!-- Status Update -->
-                <td>
+<td>{{ application.full_name }}</td>
 
-                    {% if application.status != 'Placed' %}
+<td>{{ application.email }}</td>
 
-                    <form method="POST"
-                          action="{{ url_for('company_update_status',
-                                             application_id=application.id) }}">
+<td>{{ application.phone }}</td>
 
-                        <select name="status">
-                            <option value="Applied">Applied</option>
-                            <option value="Shortlisted">Shortlisted</option>
-                            <option value="Interview">Interview</option>
-                            <option value="Rejected">Rejected</option>
-                            <option value="Placed">Placed</option>
-                        </select>
+<td>{{ application.applied_at }}</td>
 
-                        <button type="submit">Update</button>
+<td>{{ application.status }}</td>
 
-                    </form>
+<td>
 
-                    {% else %}
-                        Finalized
-                    {% endif %}
+{% if application.resume_snapshot_path %}
 
-                </td>
-            </tr>
-            {% endfor %}
+<a href="{{ url_for('download_resume',
+filename=application.resume_snapshot_path) }}">
+View Resume
+</a>
 
-        </table>
+{% else %}
 
-    {% else %}
-        <p>No applications yet.</p>
-    {% endif %}
+No Resume
+
+{% endif %}
+
+</td>
+
+<td>
+
+{% if application.status != 'Placed' %}
+
+<form method="POST"
+action="{{ url_for('company_update_status',
+application_id=application.id) }}">
+
+<select name="status">
+
+<option value="Applied"
+{% if application.status=='Applied' %}selected{% endif %}>
+Applied
+</option>
+
+<option value="Shortlisted"
+{% if application.status=='Shortlisted' %}selected{% endif %}>
+Shortlisted
+</option>
+
+<option value="Interview"
+{% if application.status=='Interview' %}selected{% endif %}>
+Interview
+</option>
+
+<option value="Rejected"
+{% if application.status=='Rejected' %}selected{% endif %}>
+Rejected
+</option>
+
+<option value="Placed"
+{% if application.status=='Placed' %}selected{% endif %}>
+Placed
+</option>
+
+</select>
+
+<button type="submit" class="btn">
+Update
+</button>
+
+</form>
+
+{% else %}
+
+Finalized
+
+{% endif %}
+
+</td>
+
+</tr>
+
+<tr>
+<td colspan="7">
+
+<b>Related Work</b><br>
+{{ application["related_work"] }}
+
+<br><br>
+
+<b>Related Projects</b><br>
+{{ application["related_projects"] }}
+
+<br><br>
+
+<b>Why Good Fit</b><br>
+{{ application["job_fit_statement"] }}
+
+</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<p>No applications yet.</p>
+
+{% endif %}
 
 </body>
 </html>

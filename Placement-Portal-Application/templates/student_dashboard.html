@@ -56,13 +56,6 @@
             border-radius: 5px;
         }
 
-        .notification-box {
-            background-color: #f2f2f2;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-
         .search-box {
             margin-bottom: 15px;
         }
@@ -74,6 +67,23 @@
 
         .search-box button {
             padding: 6px 10px;
+        }
+
+        .chart-container {
+            margin-top: 25px;
+        }
+
+        .bar-bg {
+            background: #ddd;
+            height: 22px;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        .bar-fill {
+            background: #007bff;
+            height: 22px;
+            border-radius: 5px;
         }
 
         hr {
@@ -90,17 +100,6 @@
 <a href="{{ url_for('student_profile') }}">Edit Profile</a>
 
 <hr>
-
-<!-- ================= NOTIFICATIONS ================= -->
-
-{% if notifications %}
-<div class="notification-box">
-    <h3>Notifications</h3>
-    {% for note in notifications %}
-        <p>{{ note.message }} ({{ note.created_at }})</p>
-    {% endfor %}
-</div>
-{% endif %}
 
 <!-- ================= PLACEMENT BANNER ================= -->
 
@@ -189,6 +188,29 @@
 </table>
 {% else %}
 <p>You have not applied to any drives yet.</p>
+{% endif %}
+
+<hr>
+
+<!-- ================= STATUS VISUALIZATION ================= -->
+
+<h3>Application Status Distribution</h3>
+
+{% if status_chart %}
+<div class="chart-container">
+    {% for item in status_chart %}
+        <div style="margin-bottom:15px;">
+            <strong>{{ item.status }} ({{ item.count }})</strong>
+            <div class="bar-bg">
+                <div class="bar-fill"
+                     style="width: {{ item.percent }}%;">
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No application data to visualize.</p>
 {% endif %}
 
 </body>

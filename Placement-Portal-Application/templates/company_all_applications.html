@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Applications</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    margin:30px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+table,th,td{
+    border:1px solid #999;
+}
+
+th,td{
+    padding:10px;
+    text-align:center;
+}
+
+th{
+    background:#e0e0e0;
+}
+
+.btn{
+    padding:6px 10px;
+    text-decoration:none;
+    border-radius:4px;
+    background:#343a40;
+    color:white;
+}
+
+</style>
+
+</head>
+<body>
+
+<h2>All Applications</h2>
+
+<a href="{{ url_for('company_dashboard') }}" class="btn">
+Back to Dashboard
+</a>
+
+<br><br>
+
+{% if applications %}
+
+<table>
+
+<tr>
+<th>Student</th>
+<th>Drive</th>
+<th>Status</th>
+<th>Applied At</th>
+</tr>
+
+{% for app in applications %}
+
+<tr>
+
+<td>{{ app.full_name }}</td>
+<td>{{ app.title }}</td>
+<td>{{ app.status }}</td>
+<td>{{ app.applied_at }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<p>No applications found.</p>
+
+{% endif %}
+
+</body>
+</html>

@@ -2,135 +2,316 @@
 <html>
 <head>
     <title>Company Dashboard</title>
-    <style>
-        body { font-family: Arial; margin: 30px; }
-        h2 { margin-bottom: 20px; }
 
-        .summary-box {
-            display: inline-block;
-            padding: 15px;
-            margin: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            width: 200px;
-            text-align: center;
-            background-color: #f5f5f5;
-        }
+<style>
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
+.summary-link{
+    text-decoration:none;
+    color:inherit;
+}
 
-        table, th, td { border: 1px solid #999; }
-        th, td { padding: 10px; text-align: center; }
-        th { background-color: #e0e0e0; }
+body{
+    font-family:Arial;
+    margin:30px;
+}
 
-        .btn {
-            padding: 6px 10px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-        }
+h2{
+    margin-bottom:20px;
+}
 
-        .btn-view { background-color: #007bff; color: white; }
-        .btn-close { background-color: #dc3545; color: white; }
-        .btn-open { background-color: #28a745; color: white; }
-        .btn-post { background-color: #343a40; color: white; padding: 8px 12px; }
+.summary-box{
+    display:inline-block;
+    padding:15px;
+    margin:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    width:200px;
+    text-align:center;
+    background-color:#f5f5f5;
+    cursor:pointer;
+}
 
-        .top-actions { margin-bottom: 20px; }
-    </style>
+.summary-box:hover{
+    transform:scale(1.03);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+table,th,td{
+    border:1px solid #999;
+}
+
+th,td{
+    padding:10px;
+    text-align:center;
+}
+
+th{
+    background-color:#e0e0e0;
+}
+
+.btn{
+    padding:6px 10px;
+    text-decoration:none;
+    border-radius:4px;
+    font-size:14px;
+}
+
+.btn-close{
+    background-color:#dc3545;
+    color:white;
+}
+
+.btn-open{
+    background-color:#28a745;
+    color:white;
+}
+
+.btn-post{
+    background-color:#343a40;
+    color:white;
+    padding:8px 12px;
+}
+
+.top-actions{
+    margin-bottom:20px;
+}
+
+.chart-section{
+    margin-top:30px;
+}
+
+.bar-bg{
+    background:#ddd;
+    height:22px;
+    border-radius:5px;
+    margin-top:5px;
+}
+
+.bar-fill-green{
+    background:#28a745;
+    height:22px;
+    border-radius:5px;
+}
+
+.bar-fill-blue{
+    background:#007bff;
+    height:22px;
+    border-radius:5px;
+}
+
+hr{
+    margin:30px 0;
+}
+
+</style>
+
 </head>
 <body>
 
-    <h2>Company Dashboard</h2>
+<h2>Company Dashboard</h2>
 
-    <div class="top-actions">
-        <a href="{{ url_for('post_drive') }}" class="btn btn-post">
-            Post New Drive
-        </a>
-        &nbsp;
-        <a href="{{ url_for('logout') }}" class="btn btn-close">
-            Logout
-        </a>
-    </div>
+<div class="top-actions">
 
-    <!-- Summary Section -->
-    <div class="summary-box">
-        <h3>Total Drives</h3>
-        <p>{{ total_jobs }}</p>
-    </div>
+<a href="{{ url_for('post_drive') }}" class="btn btn-post">
+Post New Drive
+</a>
 
-    <div class="summary-box">
-        <h3>Active Drives</h3>
-        <p>{{ active_jobs }}</p>
-    </div>
+&nbsp;
 
-    <div class="summary-box">
-        <h3>Closed Drives</h3>
-        <p>{{ closed_jobs }}</p>
-    </div>
+<a href="{{ url_for('logout') }}" class="btn btn-close">
+Logout
+</a>
 
-    <div class="summary-box">
-        <h3>Total Applications</h3>
-        <p>{{ total_applications }}</p>
-    </div>
+</div>
 
-    <hr>
 
-    <h3>Your Posted Drives</h3>
+<!-- SUMMARY BOXES -->
 
-    {% if jobs %}
-    <table>
-        <tr>
-            <th>Title</th>
-            <th>Location</th>
-            <th>Skills</th>
-            <th>Experience</th>
-            <th>Salary Range</th>
-            <th>Approval</th>
-            <th>Status</th>
-            <th>Applications</th>
-            <th>Action</th>
-        </tr>
+<div class="summary-box"
+onclick="window.location='{{ url_for('company_dashboard', filter='all') }}'">
 
-        {% for job in jobs %}
-        <tr>
-            <td>{{ job.title }}</td>
-            <td>{{ job.location }}</td>
-            <td>{{ job.required_skills }}</td>
-            <td>{{ job.experience_required }}</td>
-            <td>{{ job.min_salary }} - {{ job.max_salary }}</td>
-            <td>{{ job.approval_status }}</td>
-            <td>{{ job.drive_status }}</td>
+<h3>Total Drives</h3>
+<p>{{ total_jobs }}</p>
 
-            <td>
-                <a href="{{ url_for('view_job_applications', drive_id=job.id) }}"
-                   class="btn btn-view">
-                    View
-                </a>
-            </td>
+</div>
 
-            <td>
-                {% if job.drive_status == 'Active' %}
-                    <a href="{{ url_for('toggle_drive_status',  drive_id=job.id) }}"
-                       class="btn btn-close">
-                        Close
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('toggle_drive_status',  drive_id=job.id) }}"
-                       class="btn btn-open">
-                        Activate
-                    </a>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-        <p>No drives posted yet.</p>
-    {% endif %}
+
+<div class="summary-box"
+onclick="window.location='{{ url_for('company_dashboard', filter='active') }}'">
+
+<h3>Active Drives</h3>
+<p>{{ active_jobs }}</p>
+
+</div>
+
+
+<div class="summary-box"
+onclick="window.location='{{ url_for('company_dashboard', filter='closed') }}'">
+
+<h3>Closed Drives</h3>
+<p>{{ closed_jobs }}</p>
+
+</div>
+
+
+<div class="summary-box">
+
+<h3>Total Applications</h3>
+<p>{{ total_applications }}</p>
+
+</div>
+
+
+<hr>
+
+
+<h3>Your Posted Drives</h3>
+
+{% if jobs %}
+
+<table>
+
+<tr>
+
+<th>Title</th>
+<th>Location</th>
+<th>Skills</th>
+<th>Experience</th>
+<th>Salary Range</th>
+<th>Approval</th>
+<th>Status</th>
+<th>Total Applications</th>
+<th>Action</th>
+
+</tr>
+
+{% for job in jobs %}
+
+<tr>
+
+<td>{{ job.title }}</td>
+<td>{{ job.location }}</td>
+<td>{{ job.required_skills }}</td>
+<td>{{ job.experience_required }}</td>
+<td>{{ job.min_salary }} - {{ job.max_salary }}</td>
+<td>{{ job.approval_status }}</td>
+<td>{{ job.drive_status }}</td>
+
+<td>
+{{ job.total_applications }}
+<br><br>
+<a href="{{ url_for('view_job_applications', drive_id=job.id) }}"
+class="btn btn-post">
+View
+</a>
+</td>
+
+<td>
+
+{% if job.drive_status == 'Active' %}
+
+<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
+class="btn btn-close">
+Close
+</a>
+
+{% else %}
+
+<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
+class="btn btn-open">
+Activate
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<p>No drives posted yet.</p>
+
+{% endif %}
+
+
+<hr>
+
+
+<!-- APPLICATIONS PER DRIVE -->
+
+<h3>Applications Per Drive</h3>
+
+{% if drive_chart %}
+
+<div class="chart-section">
+
+{% for item in drive_chart %}
+
+<div style="margin-bottom:15px">
+
+<strong>{{ item.title }} ({{ item.total }})</strong>
+
+<div class="bar-bg">
+<div class="bar-fill-green"
+style="width: {{ item.percent }}%"></div>
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<p>No application data available.</p>
+
+{% endif %}
+
+
+<hr>
+
+
+<!-- APPLICATION STATUS DISTRIBUTION -->
+
+<h3>Application Status Distribution</h3>
+
+{% if status_chart %}
+
+<div class="chart-section">
+
+{% for item in status_chart %}
+
+<div style="margin-bottom:15px">
+
+<strong>{{ item.status }} ({{ item.count }})</strong>
+
+<div class="bar-bg">
+<div class="bar-fill-blue"
+style="width: {{ item.percent }}%"></div>
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<p>No status data available.</p>
+
+{% endif %}
 
 </body>
 </html>

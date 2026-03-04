@@ -8,21 +8,26 @@ from werkzeug.utils import secure_filename
 from werkzeug.utils import secure_filename
 from flask import jsonify
 
+import sqlite3
+
+
+app = Flask(__name__)
+app.secret_key = "supersecretkey"
+
+DB_NAME = "placement_portal.db"
+
 def get_db_connection():
-    conn = get_db_connection()
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-
-app = Flask(__name__)
-app.secret_key = "supersecretkey"
 
 UPLOAD_FOLDER = "uploads/resumes"
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -138,8 +143,10 @@ def admin_login():
 def admin_dashboard():
 
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # ---------------- BASIC COUNTS ----------------
     cursor.execute("SELECT COUNT(*) FROM Company")
     total_companies = cursor.fetchone()[0]
 
@@ -155,6 +162,38 @@ def admin_dashboard():
     cursor.execute("SELECT COUNT(*) FROM Placement")
     total_placements = cursor.fetchone()[0]
 
+    # ---------------- ADMIN BAR CHART ----------------
+    admin_labels = ["Jobs", "Applications", "Placements"]
+    admin_counts = [total_jobs, total_applications, total_placements]
+
+    # ---------------- COMPANY APPROVAL PIE ----------------
+    cursor.execute("""
+        SELECT approval_status, COUNT(*) as count
+        FROM Company
+        GROUP BY approval_status
+    """)
+    company_data = cursor.fetchall()
+
+    company_labels = [row["approval_status"] for row in company_data]
+    company_counts = [row["count"] for row in company_data]
+
+    # ---------------- APPLICATION STATUS PIE ----------------
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM Application
+        GROUP BY status
+    """)
+    app_data = cursor.fetchall()
+
+    application_labels = [row["status"] for row in app_data]
+    application_counts = [row["count"] for row in app_data]
+
+    # ---------------- PLACEMENT RATE ----------------
+    placement_rate = (
+        round((total_placements / total_students) * 100, 2)
+        if total_students else 0
+    )
+
     conn.close()
 
     return render_template(
@@ -163,9 +202,15 @@ def admin_dashboard():
         students=total_students,
         jobs=total_jobs,
         applications=total_applications,
-        placements=total_placements
+        placements=total_placements,
+        placement_rate=placement_rate,
+        admin_labels=admin_labels,
+        admin_counts=admin_counts,
+        company_labels=company_labels,
+        company_counts=company_counts,
+        application_labels=application_labels,
+        application_counts=application_counts
     )
-
 
 #----------- MANAGE STUDENTS ----------------
 @app.route("/admin/manage_students")
@@ -517,11 +562,13 @@ def company_login():
 def company_dashboard():
 
     company_id = session["company_id"]
+    filter_type = request.args.get("filter")
 
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # ---------------- BASIC COUNTS ----------------
     cursor.execute("SELECT COUNT(*) FROM PlacementDrive WHERE company_id=?", (company_id,))
     total_jobs = cursor.fetchone()[0]
 
@@ -545,11 +592,85 @@ def company_dashboard():
     """, (company_id,))
     total_applications = cursor.fetchone()[0]
 
-    cursor.execute("""
-        SELECT * FROM PlacementDrive
-        WHERE company_id=?
-    """, (company_id,))
+    if filter_type == "applications":
+        return redirect(url_for("view_company_applications"))    
+
+    # ---------------- JOB LIST ----------------
+
+    base_query = """
+    SELECT PlacementDrive.*,
+            COUNT(Application.id) AS total_applications
+    FROM PlacementDrive
+    LEFT JOIN Application
+    ON PlacementDrive.id = Application.drive_id
+    WHERE PlacementDrive.company_id=?
+    """
+
+    params = [company_id]
+
+    if filter_type == "active":
+        base_query += " AND PlacementDrive.drive_status='Active'"
+
+    elif filter_type == "closed":
+        base_query += " AND PlacementDrive.drive_status='Closed'"
+
+    base_query += """ 
+    GROUP BY PlacementDrive.id
+    ORDER BY PlacementDrive.id DESC
+    """
+
+    cursor.execute(base_query, params)
     jobs = cursor.fetchall()
+
+    # ---------------- APPLICATION TREND PER DRIVE ----------------
+    cursor.execute("""
+        SELECT PlacementDrive.title,
+               COUNT(Application.id) as total_apps
+        FROM PlacementDrive
+        LEFT JOIN Application
+        ON PlacementDrive.id = Application.drive_id
+        WHERE PlacementDrive.company_id = ?
+        GROUP BY PlacementDrive.id
+    """, (company_id,))
+
+    drive_stats = cursor.fetchall()
+      
+    max_apps = max([row["total_apps"] for row in drive_stats], default=1)
+
+    drive_chart = []
+    for row in drive_stats:
+        percent = (row["total_apps"] / max_apps) * 100 if max_apps else 0
+        drive_chart.append({
+            "title": row["title"],
+            "total": row["total_apps"],
+            "percent": round(percent, 2)
+        })
+    
+    # -------- APPLICATION STATUS DISTRIBUTION --------
+
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM Application
+        JOIN PlacementDrive
+        ON Application.drive_id = PlacementDrive.id
+        WHERE PlacementDrive.company_id = ?
+        GROUP BY status
+    """, (company_id,))
+
+    status_data = cursor.fetchall()
+
+    status_chart = []
+    max_status = max([row["count"] for row in status_data], default=1)
+
+    for row in status_data:
+        percent = (row["count"] / max_status) * 100 if max_status else 0
+        status_chart.append({
+            "status": row["status"],
+            "count": row["count"],
+            "percent": round(percent, 2)
+        })
+
+
 
     conn.close()
 
@@ -559,7 +680,10 @@ def company_dashboard():
         active_jobs=active_jobs,
         closed_jobs=closed_jobs,
         total_applications=total_applications,
-        jobs=jobs
+        jobs=jobs,
+        drive_chart=drive_chart,
+        status_chart=status_chart,
+        filter_type=filter_type
     )
 
 @app.route("/company/post_drive", methods=["GET", "POST"])
@@ -631,18 +755,22 @@ def view_job_applications(drive_id):
         return "Unauthorized access"
 
     cursor.execute("""
-        SELECT Application.id,
-               Application.status,
-               Application.applied_at,
-               Student.id AS student_id,
-               Student.full_name,
-               Student.email,
-               Student.phone,
-               Application.resume_snapshot_path
-        FROM Application
-        JOIN Student ON Application.student_id = Student.id
-        WHERE Application.drive_id=?
-    """, (drive_id,))
+    SELECT Application.id,
+           Application.status,
+           Application.applied_at,
+           Application.related_work,
+           Application.related_projects,
+           Application.job_fit_statement,
+           Student.id AS student_id,
+           Student.full_name,
+           Student.email,
+           Student.phone,
+           Application.resume_snapshot_path
+    FROM Application
+    JOIN Student
+    ON Application.student_id = Student.id
+    WHERE Application.drive_id = ?
+""", (drive_id,))
 
     applications = cursor.fetchall()
 
@@ -830,6 +958,7 @@ def company_update_status(application_id):
 
     return redirect(url_for("company_dashboard"))
 
+
 # ==================================================
 # STUDENT SECTION
 # ==================================================
@@ -931,14 +1060,15 @@ def student_dashboard():
     search = request.args.get("search", "").strip()
 
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # -------- GET STUDENT NAME --------
+    # ---------------- GET STUDENT NAME ----------------
     cursor.execute("SELECT full_name FROM Student WHERE id=?", (student_id,))
     student = cursor.fetchone()
     student_name = student["full_name"] if student else "Student"
 
-    # -------- CHECK IF PLACED --------
+    # ---------------- CHECK IF PLACED ----------------
     cursor.execute("""
         SELECT PlacementDrive.title,
                Company.name AS company_name
@@ -947,10 +1077,11 @@ def student_dashboard():
         JOIN Company ON PlacementDrive.company_id = Company.id
         WHERE Application.student_id = ?
         AND Application.status = 'Placed'
+        LIMIT 1
     """, (student_id,))
     placement_info = cursor.fetchone()
 
-    # -------- AVAILABLE DRIVES --------
+    # ---------------- AVAILABLE DRIVES ----------------
     available_drives = []
 
     if not placement_info:
@@ -992,7 +1123,7 @@ def student_dashboard():
         cursor.execute(base_query, params)
         available_drives = cursor.fetchall()
 
-    # -------- APPLIED DRIVES --------
+    # ---------------- APPLIED DRIVES ----------------
     cursor.execute("""
         SELECT PlacementDrive.title,
                Company.name AS company_name,
@@ -1005,15 +1136,18 @@ def student_dashboard():
         ORDER BY Application.applied_at DESC
     """, (student_id,))
     applied_drives = cursor.fetchall()
-
-    # -------- NOTIFICATIONS --------
+    
+    # ---------------- STATUS DISTRIBUTION (FOR CHART.JS) ----------------
     cursor.execute("""
-        SELECT id, message, created_at, is_read
-        FROM Notification
+        SELECT status, COUNT(*) as count
+        FROM Application
         WHERE student_id = ?
-        ORDER BY created_at DESC
+        GROUP BY status
     """, (student_id,))
-    notifications = cursor.fetchall()
+    status_data = cursor.fetchall()
+
+    status_labels = [row["status"] for row in status_data]
+    status_counts = [row["count"] for row in status_data]
 
     conn.close()
 
@@ -1023,9 +1157,11 @@ def student_dashboard():
         available_drives=available_drives,
         applied_drives=applied_drives,
         placement_info=placement_info,
-        notifications=notifications,
+        status_labels=status_labels,
+        status_counts=status_counts,
         search=search
     )
+ 
 
 # Placement Tracking System:
 # - Prevent duplicate applications
