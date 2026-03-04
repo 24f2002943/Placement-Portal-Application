@@ -9,18 +9,39 @@
 
     <form method="POST">
 
-        <label>Full Name:</label><br>
-        <input type="text" name="full_name" required><br><br>
+<label>Full Name:</label><br>
+<input
+type="text"
+name="full_name"
+required
+minlength="3"
+maxlength="50"
+pattern="[A-Za-z\s]+"
+title="Only letters and spaces allowed">
+<br><br>
 
-        <label>Email:</label><br>
-        <input type="email" name="email" required><br><br>
+<label>Email:</label><br>
+<input
+type="email"
+name="email"
+required
+maxlength="100">
+<br><br>
 
-        <label>Password:</label><br>
-        <input type="password" name="password" required><br><br>
+<label>Password:</label><br>
+<input
+type="password"
+name="password"
+required
+minlength="6"
+maxlength="20"
+pattern=".{6,}"
+title="Password must be at least 6 characters">
+<br><br>
 
-        <button type="submit">Register</button>
+<button type="submit">Register</button>
 
-    </form>
+</form>
 
     <br>
     <a href="{{ url_for('student_login') }}">Already have an account? Login</a>

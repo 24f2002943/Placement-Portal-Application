@@ -445,10 +445,19 @@ def company_register():
         location = request.form.get("location", "").strip()
         industry = request.form.get("industry", "").strip()
 
-
+        # -------- VALIDATION --------
         if not name or not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for("company_register"))
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "danger")
+            return redirect(url_for("company_register"))
+
+        if "@" not in email:
+            flash("Invalid email format.", "danger")
+            return redirect(url_for("company_register"))
+        
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -701,6 +710,17 @@ def post_drive():
         min_salary = request.form["min_salary"]
         max_salary = request.form["max_salary"]
         deadline = request.form["deadline"]
+
+
+    # -------- VALIDATION --------
+
+        if not title or not location or not deadline:
+            flash("Title, Location and Deadline are required.", "danger")
+            return redirect(url_for("post_drive"))
+
+        if int(min_salary) > int(max_salary):
+            flash("Minimum salary cannot exceed maximum salary.", "danger")
+            return redirect(url_for("post_drive"))
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -965,20 +985,27 @@ def company_update_status(application_id):
 
 @app.route("/student/register", methods=["GET", "POST"])
 def student_register():
-
     if request.method == "POST":
 
-        full_name = request.form.get("full_name")
-        email = request.form.get("email")
-        password = request.form.get("password")
+        # ---- GET FORM DATA ----
+        full_name = request.form.get("full_name","").strip()
+        email = request.form.get("email","").strip()
+        password = request.form.get("password","")
 
-        # -------- BASIC VALIDATION --------
+        # ---- VALIDATION ----
         if not full_name or not email or not password:
             return "All fields are required."
+
+        if len(full_name) < 3:
+            return "Name must be at least 3 characters."
+
+        if "@" not in email:
+            return "Invalid email address."
 
         if len(password) < 6:
             return "Password must be at least 6 characters."
 
+        # ---- PASSWORD HASH ----
         hashed_password = generate_password_hash(password)
 
         conn = get_db_connection()
@@ -1214,7 +1241,16 @@ def student_profile():
         # -------- HANDLE RESUME UPLOAD (SNAPSHOT SAFE) --------
         file = request.files.get("resume")
 
-        if file and file.filename:
+            # ---- VALIDATION ----
+        if file:
+
+            if file.filename == "":
+                flash("No file selected.", "danger")
+                return redirect(url_for("student_profile"))
+
+            if not allowed_file(file.filename):
+                flash("Only PDF files are allowed.", "danger")
+                return redirect(url_for("student_profile"))
 
             # Get old resume name
             cursor.execute("SELECT resume_path FROM Student WHERE id=?", (student_id,))

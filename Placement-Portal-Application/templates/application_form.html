@@ -34,35 +34,74 @@
 
             <form method="POST">
 
-                <!-- Related Work -->
-                <div class="mb-3">
-                    <label class="form-label"><strong>Related Work</strong></label>
-                    <textarea
-                        name="related_work"
-                        class="form-control"
-                        rows="4"
-                        required>{{ existing_application['related_work'] if existing_application else '' }}</textarea>
-                </div>
+<!-- Related Work -->
+<div class="mb-3">
+<label class="form-label"><strong>Related Work</strong></label>
 
-                <!-- Related Projects -->
-                <div class="mb-3">
-                    <label class="form-label"><strong>Related Projects</strong></label>
-                    <textarea
-                        name="related_projects"
-                        class="form-control"
-                        rows="4"
-                        required>{{ existing_application['related_projects'] if existing_application else '' }}</textarea>
-                </div>
+<textarea
+name="related_work"
+class="form-control"
+rows="4"
+required
+minlength="20"
+maxlength="800"
+placeholder="Describe your internship experience, technical work, or industry exposure relevant to this role."
+>{{ existing_application['related_work'] if existing_application else '' }}</textarea>
 
-                <!-- Job Fit Statement -->
-                <div class="mb-3">
-                    <label class="form-label"><strong>Why are you a good fit?</strong></label>
-                    <textarea
-                        name="job_fit_statement"
-                        class="form-control"
-                        rows="4"
-                        required>{{ existing_application['job_fit_statement'] if existing_application else '' }}</textarea>
-                </div>
+<small class="text-muted">
+Minimum 20 characters. Mention internships, SDLC work, tools used, etc.
+</small>
+
+</div>
+
+
+<!-- Related Projects -->
+<div class="mb-3">
+<label class="form-label"><strong>Related Projects</strong></label>
+
+<textarea
+name="related_projects"
+class="form-control"
+rows="4"
+required
+minlength="20"
+maxlength="800"
+placeholder="Describe projects related to this job role, technologies used, and challenges solved."
+>{{ existing_application['related_projects'] if existing_application else '' }}</textarea>
+
+<small class="text-muted">
+Mention technologies, architecture, and what problem your project solved.
+</small>
+
+</div>
+
+
+<!-- Job Fit Statement -->
+<div class="mb-3">
+<label class="form-label"><strong>Why are you a good fit?</strong></label>
+
+<textarea
+name="job_fit_statement"
+class="form-control"
+rows="4"
+required
+minlength="30"
+maxlength="800"
+placeholder="Explain why your skills, projects, and experience make you suitable for this position."
+>{{ existing_application['job_fit_statement'] if existing_application else '' }}</textarea>
+
+<small class="text-muted">
+Explain your skills, achievements, and alignment with the job role.
+</small>
+
+</div>
+
+
+<button type="submit" class="btn btn-primary">
+Submit Application
+</button>
+
+</form>
 
                 <!-- Submit Button -->
                 <div class="d-flex justify-content-between">
