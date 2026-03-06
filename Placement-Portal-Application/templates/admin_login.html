@@ -1,80 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
 
-        .login-box {
-            background: white;
-            padding: 30px;
-            width: 350px;
-            border-radius: 8px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
+<title>Admin Login</title>
 
-        h2 {
-            margin-bottom: 20px;
-        }
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
+<style>
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+/* background */
 
-        button:hover {
-            background-color: #0056b3;
-        }
+body{
+font-family:Arial, sans-serif;
+margin:0;
 
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-    </style>
+background:url("{{ url_for('static', filename='images/admin_dashboard.png') }}");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+}
+
+/* overlay */
+
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(255,255,255,0.45);
+z-index:-1;
+}
+
+/* wrapper */
+
+.page-wrapper{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+}
+
+/* portal title */
+
+.portal-title{
+font-size:40px;
+font-weight:700;
+color:#1b1b1b;
+letter-spacing:1px;
+margin-bottom:35px;
+text-align:center;
+}
+
+/* login card */
+
+.login-box{
+background:white;
+padding:35px;
+width:360px;
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.25);
+text-align:center;
+}
+
+/* heading */
+
+.login-box h2{
+margin-bottom:25px;
+}
+
+/* input */
+
+input{
+width:100%;
+padding:12px;
+margin:10px 0;
+border:1px solid #ccc;
+border-radius:6px;
+font-size:14px;
+}
+
+/* button */
+
+button{
+width:100%;
+padding:12px;
+background:#007BFF;
+color:white;
+border:none;
+border-radius:6px;
+font-size:15px;
+cursor:pointer;
+}
+
+button:hover{
+background:#0056b3;
+}
+
+/* error */
+
+.error{
+color:red;
+margin-top:12px;
+font-size:14px;
+}
+
+</style>
+
 </head>
+
 <body>
 
-    <div class="login-box">
-        <h2>Admin Login</h2>
+<div class="page-wrapper">
 
-        <form method="POST">
-            <input type="text" name="username" placeholder="Enter Username" required>
-            <input type="password" name="password" placeholder="Enter Password" required>
-            <button type="submit">Login</button>
-        </form>
+<h1 class="portal-title">
+Placement Portal Application
+</h1>
 
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="error">
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+<div class="login-box">
 
-    </div>
+<h2>Admin Login</h2>
+
+<form method="POST">
+
+<input
+type="text"
+name="username"
+placeholder="Enter Username"
+required>
+
+<input
+type="password"
+name="password"
+placeholder="Enter Password"
+required>
+
+<button type="submit">
+Login
+</button>
+
+</form>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+
+<div class="error">
+
+{% for message in messages %}
+<p>{{ message }}</p>
+{% endfor %}
+
+</div>
+
+{% endif %}
+{% endwith %}
+
+</div>
+
+</div>
 
 </body>
 </html>

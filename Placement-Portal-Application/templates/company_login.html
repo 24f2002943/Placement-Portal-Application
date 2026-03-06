@@ -1,44 +1,175 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Company Login</title>
+
+<title>Company Login</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+/* background image */
+
+body{
+margin:0;
+background:url("{{ url_for('static', filename='images/company_dashboard.png') }}");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+}
+
+/* overlay */
+
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.55);
+z-index:-1;
+}
+
+/* page wrapper */
+
+.page-wrapper{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+}
+
+/* portal title */
+
+.portal-title{
+color:white;
+font-size:40px;
+font-weight:700;
+letter-spacing:1px;
+margin-bottom:35px;
+text-align:center;
+}
+
+/* login box */
+
+.login-box{
+width:420px;
+background:white;
+padding:40px;
+border-radius:12px;
+box-shadow:0 12px 30px rgba(0,0,0,0.35);
+}
+
+/* heading */
+
+.login-box h2{
+text-align:center;
+margin-bottom:25px;
+}
+
+/* login button */
+
+.btn-login{
+width:100%;
+}
+
+/* links */
+
+.links{
+text-align:center;
+margin-top:15px;
+}
+
+</style>
+
 </head>
+
 <body>
+
+<div class="page-wrapper">
+
+<h1 class="portal-title">
+Placement Portal Application
+</h1>
+
+<div class="login-box">
 
 <h2>Company Login</h2>
 
-<!-- Flash Messages -->
+
 {% with messages = get_flashed_messages() %}
-  {% if messages %}
-    {% for message in messages %}
-      <p style="color:red;">{{ message }}</p>
-    {% endfor %}
-  {% endif %}
+{% if messages %}
+
+<div class="alert alert-danger text-center">
+
+{% for message in messages %}
+{{ message }}
+{% endfor %}
+
+</div>
+
+{% endif %}
 {% endwith %}
+
 
 <form method="POST" action="{{ url_for('company_login') }}">
 
-    <label>Email:</label><br>
-    <input type="email" name="email" required><br><br>
+<div class="mb-3">
 
-    <label>Password:</label><br>
-    <input type="password" name="password" required><br><br>
+<label class="form-label">Email</label>
 
-    <button type="submit">Login</button>
+<input
+type="email"
+name="email"
+class="form-control"
+placeholder="Enter email"
+required>
+
+</div>
+
+
+<div class="mb-3">
+
+<label class="form-label">Password</label>
+
+<input
+type="password"
+name="password"
+class="form-control"
+placeholder="Enter password"
+required>
+
+</div>
+
+
+<button type="submit" class="btn btn-primary btn-login">
+Login
+</button>
 
 </form>
 
-<br>
+
+<div class="links">
 
 <a href="{{ url_for('company_register') }}">
-    New Company? Register Here
+New Company? Register
 </a>
 
 <br><br>
 
 <a href="{{ url_for('home') }}">
-    Back to Home
+Back to Home
 </a>
+
+</div>
+
+</div>
+
+</div>
 
 </body>
 </html>

@@ -13,20 +13,48 @@
 <style>
 
 body{
-background:#f4f4f4;
+margin:0;
+
+    background:url("{{ url_for('static', filename='images/admin_dashboard.png') }}");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    }
+
+body::before{
+    content:"";
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(255,255,255,0.45);
+    z-index:-1;
+  }
+
+
+
+.dashboard-box{
+background:rgba(255,255,255,0.95);
+padding:35px;
+border-radius:12px;
+box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
+
+
 
 .card-box{
 border-radius:10px;
 box-shadow:0 4px 8px rgba(0,0,0,0.1);
 }
 
+
 .chart-box{
 background:white;
-padding:20px;
+padding:25px;
 border-radius:10px;
 box-shadow:0 4px 8px rgba(0,0,0,0.1);
-margin-bottom:30px;
+margin-top:30px;
 }
 
 </style>
@@ -36,18 +64,21 @@ margin-bottom:30px;
 
 <body>
 
-<div class="container mt-4">
+<div class="container mt-5 mb-5 dashboard-box">
+
 
 <div class="d-flex justify-content-between align-items-center mb-4">
 
 <h2>Admin Dashboard</h2>
 
-<a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+<a href="{{ url_for('logout') }}" class="btn btn-danger">
+Logout
+</a>
 
 </div>
 
 
-<!-- KPI CARDS -->
+
 
 <div class="row text-center g-3">
 
@@ -108,7 +139,8 @@ margin-bottom:30px;
 </div>
 
 
-<!-- ADMIN ACTIONS -->
+
+
 
 <div class="text-center mt-4">
 
@@ -131,39 +163,45 @@ Manage Applications
 </div>
 
 
-<hr class="mt-5">
-
-
-<!-- CHARTS -->
 
 <div class="chart-box">
 
-<h4 class="text-center mb-4">Overall System Statistics</h4>
+<h4 class="text-center mb-4">
+Overall System Statistics
+</h4>
 
 <canvas id="adminBarChart"></canvas>
 
 </div>
 
 
+
 <div class="chart-box">
 
-<h4 class="text-center mb-4">Company Approval Status</h4>
+<h4 class="text-center mb-4">
+Company Approval Status
+</h4>
 
 <canvas id="companyChart"></canvas>
 
 </div>
 
 
+
 <div class="chart-box">
 
-<h4 class="text-center mb-4">Application Status Distribution</h4>
+<h4 class="text-center mb-4">
+Application Status Distribution
+</h4>
 
 <canvas id="applicationChart"></canvas>
 
 </div>
 
 
+
 </div>
+
 
 
 <script>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>{% block title %}Placement Portal{% endblock %}</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#f4f6f9;
+}
+
+/* Layout */
+
+.layout{
+display:flex;
+height:100vh;
+}
+
+/* Sidebar */
+
+.sidebar{
+width:240px;
+background:#ffffff;
+border-right:1px solid #e0e0e0;
+padding:20px;
+}
+
+.sidebar h4{
+margin-bottom:30px;
+font-weight:bold;
+}
+
+.sidebar a{
+display:block;
+padding:10px;
+margin-bottom:10px;
+color:#333;
+text-decoration:none;
+border-radius:6px;
+}
+
+.sidebar a:hover{
+background:#f1f1f1;
+}
+
+/* Main area */
+
+.main{
+flex:1;
+display:flex;
+flex-direction:column;
+}
+
+/* Topbar */
+
+.topbar{
+background:white;
+padding:15px 25px;
+border-bottom:1px solid #e0e0e0;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+/* Page content */
+
+.content{
+padding:30px;
+overflow:auto;
+}
+
+/* Flash messages */
+
+.flash{
+margin-bottom:15px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<h4>Placement Portal</h4>
+
+{% if current_user.is_authenticated %}
+
+{% if current_user.role == "admin" %}
+
+<a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+<a href="{{ url_for('manage_companies') }}">Manage Companies</a>
+<a href="{{ url_for('manage_students') }}">Manage Students</a>
+<a href="{{ url_for('manage_jobs') }}">Manage Jobs</a>
+<a href="{{ url_for('manage_applications') }}">Applications</a>
+
+{% elif current_user.role == "company" %}
+
+<a href="{{ url_for('company_dashboard') }}">Dashboard</a>
+<a href="{{ url_for('post_drive') }}">Post Drive</a>
+
+{% elif current_user.role == "student" %}
+
+<a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+<a href="{{ url_for('student_profile') }}">Profile</a>
+
+{% endif %}
+
+{% endif %}
+
+</div>
+
+
+<!-- MAIN AREA -->
+
+<div class="main">
+
+<!-- TOPBAR -->
+
+<div class="topbar">
+
+<h5>{% block page_title %}Dashboard{% endblock %}</h5>
+
+<div>
+
+{% if current_user.is_authenticated %}
+
+<a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">
+Logout
+</a>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<!-- CONTENT -->
+
+<div class="content">
+
+<!-- FLASH MESSAGES -->
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+
+{% for message in messages %}
+
+<div class="alert alert-info flash">
+{{ message }}
+</div>
+
+{% endfor %}
+
+{% endif %}
+{% endwith %}
+
+{% block content %}
+{% endblock %}
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>

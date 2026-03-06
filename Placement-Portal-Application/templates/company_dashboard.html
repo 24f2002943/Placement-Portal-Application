@@ -10,22 +10,81 @@
 
 <style>
 
+/* Background */
+
+body{
+    background:url("{{ url_for('static', filename='images/company_dashboard.png') }}");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+}
+
+/* Dark overlay */
+
+body::before{
+    content:"";
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.55);
+    z-index:-1;
+}
+
+/* Main dashboard container */
+
+.dashboard-box{
+    background:rgba(255,255,255,0.94);
+    padding:35px;
+    border-radius:12px;
+    backdrop-filter:blur(6px);
+}
+
+/* Cards */
+
+.card{
+    border:none;
+    border-radius:10px;
+}
+
+/* Chart bars */
+
 .bar-bg{
-background:#e9ecef;
-height:20px;
-border-radius:5px;
+    background:#e9ecef;
+    height:20px;
+    border-radius:5px;
 }
 
 .bar-fill-green{
-background:#28a745;
-height:20px;
-border-radius:5px;
+    background:#28a745;
+    height:20px;
+    border-radius:5px;
 }
 
 .bar-fill-blue{
-background:#007bff;
-height:20px;
-border-radius:5px;
+    background:#007bff;
+    height:20px;
+    border-radius:5px;
+}
+
+/* Section spacing */
+
+.section{
+    margin-top:50px;
+}
+
+.chart-item{
+    margin-bottom:25px;
+}
+
+h2{
+    font-weight:600;
+}
+
+h4{
+    margin-bottom:20px;
+    font-weight:600;
 }
 
 </style>
@@ -34,9 +93,13 @@ border-radius:5px;
 
 <body>
 
-<div class="container mt-4">
+<div class="container mt-5 mb-5 dashboard-box">
 
-<div class="d-flex justify-content-between mb-4">
+
+<!-- HEADER -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
 <h2>Company Dashboard</h2>
 
 <div>
@@ -47,7 +110,9 @@ border-radius:5px;
 </div>
 
 
-<div class="row text-center mb-4">
+<!-- SUMMARY CARDS -->
+
+<div class="row text-center g-4">
 
 <div class="col-md-3">
 <div class="card shadow-sm">
@@ -88,13 +153,18 @@ border-radius:5px;
 </div>
 
 
+<!-- DRIVES TABLE -->
+
+<div class="section">
+
 <h4>Your Drives</h4>
 
 <div class="table-responsive">
 
 <table class="table table-bordered table-striped">
 
-<thead>
+<thead class="table-dark">
+
 <tr>
 <th>Title</th>
 <th>Location</th>
@@ -103,6 +173,7 @@ border-radius:5px;
 <th>Applications</th>
 <th>Action</th>
 </tr>
+
 </thead>
 
 <tbody>
@@ -119,20 +190,33 @@ border-radius:5px;
 <td>{{ job.drive_status }}</td>
 
 <td>
+
 <strong>{{ job.total_applications }}</strong>
+
 <br>
-<a href="{{ url_for('view_job_applications', drive_id=job.id) }}" class="btn btn-sm btn-primary">View</a>
+
+<a href="{{ url_for('view_job_applications', drive_id=job.id) }}"
+class="btn btn-sm btn-primary mt-1">
+View
+</a>
+
 </td>
 
 <td>
 
 {% if job.drive_status == 'Active' %}
 
-<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}" class="btn btn-sm btn-danger">Close</a>
+<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
+class="btn btn-sm btn-danger">
+Close
+</a>
 
 {% else %}
 
-<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}" class="btn btn-sm btn-success">Activate</a>
+<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
+class="btn btn-sm btn-success">
+Activate
+</a>
 
 {% endif %}
 
@@ -156,8 +240,12 @@ border-radius:5px;
 
 </div>
 
-<hr>
+</div>
 
+
+<!-- APPLICATIONS PER DRIVE -->
+
+<div class="section">
 
 <h4>Applications Per Drive</h4>
 
@@ -165,13 +253,15 @@ border-radius:5px;
 
 {% for item in drive_chart %}
 
+<div class="chart-item">
+
 <p><strong>{{ item.title }} ({{ item.total }})</strong></p>
 
 <div class="bar-bg">
 <div class="bar-fill-green" style="width: {{ item.percent }}%"></div>
 </div>
 
-<br>
+</div>
 
 {% endfor %}
 
@@ -181,9 +271,12 @@ border-radius:5px;
 
 {% endif %}
 
+</div>
 
-<hr>
 
+<!-- STATUS DISTRIBUTION -->
+
+<div class="section">
 
 <h4>Status Distribution</h4>
 
@@ -191,13 +284,15 @@ border-radius:5px;
 
 {% for item in status_chart %}
 
+<div class="chart-item">
+
 <p><strong>{{ item.status }} ({{ item.count }})</strong></p>
 
 <div class="bar-bg">
 <div class="bar-fill-blue" style="width: {{ item.percent }}%"></div>
 </div>
 
-<br>
+</div>
 
 {% endfor %}
 
@@ -206,6 +301,8 @@ border-radius:5px;
 <p>No status data available.</p>
 
 {% endif %}
+
+</div>
 
 </div>
 

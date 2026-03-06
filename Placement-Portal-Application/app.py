@@ -1,17 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-import os
-import uuid
-from werkzeug.utils import secure_filename
 from werkzeug.utils import secure_filename
 from flask import jsonify
-
-import sqlite3
-
 from datetime import timedelta
+import sqlite3
+import os
+import uuid
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "supersecretkey"
@@ -25,8 +22,8 @@ login_manager.login_view = "home"
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_TYPE"] = "filesystem"
 
-from functools import wraps
-from flask_login import current_user
+
+
 
 def role_required(role):
 
@@ -57,15 +54,12 @@ def get_db_connection():
     return conn
 
 
-# ==============================
-# FLASK LOGIN USER MODEL
-# ==============================
 
 class User(UserMixin):
 
-    def __init__(self, user_id, role):
+    def __init__(self,  user_id, role):
         self.id = str(user_id)
-        self.role = role
+        self.role =  role
 
     def get_id(self):
         return f"{self.role}:{self.id}"
@@ -73,31 +67,31 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_key):
 
-    if not user_key or ":" not in user_key:
+    if not user_key or ":" not  in user_key:
         return None
 
-    role, user_id = user_key.split(":", 1)
+    role, user_id = user_key.split(":",  1)
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     if role == "admin":
-        cursor.execute("SELECT id FROM Admin WHERE id=?", (user_id,))
+        cursor.execute(" SELECT id FROM Admin WHERE id=?", (user_id,))
         if cursor.fetchone():
             conn.close()
-            return User(user_id, "admin")
+            return User(user_id,  "admin")
 
     if role == "company":
         cursor.execute("SELECT id FROM Company WHERE id=?", (user_id,))
         if cursor.fetchone():
             conn.close()
-            return User(user_id, "company")
+            return User(user_id,  "company" )
 
     if role == "student":
-        cursor.execute("SELECT id FROM Student WHERE id=?", (user_id,))
+        cursor.execute("SELECT id  FROM Student WHERE id=?", (user_id,))
         if cursor.fetchone():
             conn.close()
-            return User(user_id, "student")
+            return  User(user_id,  "student")
 
     conn.close()
     return None
@@ -119,8 +113,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 def allowed_file(filename):
     return "." in filename and \
            filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
 
 DB_NAME = "placement_portal.db"
 
@@ -147,18 +139,9 @@ def download_resume(filename):
     return send_from_directory("uploads", filename)
 
 
-# ==================================================
-# HOME
-# ==================================================
-
 @app.route("/")
 def home():
     return "<h2>Placement Portal Running Successfully!</h2>"
-
-
-# ==================================================
-# ADMIN SECTION
-# ==================================================
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -194,7 +177,6 @@ def admin_login():
             flash("Invalid credentials", "danger")
             return redirect(url_for("admin_login"))
 
-        # Flask-Login authentication
         user = User(admin["id"], "admin")
         login_user(user, remember=True)
         session.permanent = True
@@ -217,7 +199,7 @@ def admin_dashboard():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # ---------------- BASIC COUNTS ----------------
+    
     cursor.execute("SELECT COUNT(*) FROM Company")
     total_companies = cursor.fetchone()[0]
 
@@ -233,11 +215,11 @@ def admin_dashboard():
     cursor.execute("SELECT COUNT(*) FROM Placement")
     total_placements = cursor.fetchone()[0]
 
-    # ---------------- ADMIN BAR CHART ----------------
+    
     admin_labels = ["Jobs", "Applications", "Placements"]
     admin_counts = [total_jobs, total_applications, total_placements]
 
-    # ---------------- COMPANY APPROVAL PIE ----------------
+
     cursor.execute("""
         SELECT approval_status, COUNT(*) as count
         FROM Company
@@ -248,7 +230,7 @@ def admin_dashboard():
     company_labels = [row["approval_status"] for row in company_data]
     company_counts = [row["count"] for row in company_data]
 
-    # ---------------- APPLICATION STATUS PIE ----------------
+    
     cursor.execute("""
         SELECT status, COUNT(*) as count
         FROM Application
@@ -259,7 +241,7 @@ def admin_dashboard():
     application_labels = [row["status"] for row in app_data]
     application_counts = [row["count"] for row in app_data]
 
-    # ---------------- PLACEMENT RATE ----------------
+   
     placement_rate = (
         round((total_placements / total_students) * 100, 2)
         if total_students else 0
@@ -283,7 +265,7 @@ def admin_dashboard():
         application_counts=application_counts
     )
 
-#----------- MANAGE STUDENTS ----------------
+
 @app.route("/admin/manage_students")
 @login_required
 def manage_students():
@@ -337,7 +319,7 @@ def blacklist_student(student_id):
     return redirect(url_for("manage_students"))
 
 
-# ---------------- MANAGE COMPANIES ----------------
+
 
 @app.route("/admin/manage_companies")
 @login_required
@@ -436,7 +418,6 @@ def blacklist_company(company_id):
     return redirect(url_for("manage_companies"))
 
 
-#------------ MANAGE JOBS ----------------
 @app.route("/admin/manage_jobs")
 @login_required
 def manage_jobs():
@@ -499,8 +480,6 @@ def update_job_status(drive_id, action):
     return redirect(url_for("manage_jobs"))
 
 
-# ---------------- MANAGE APPLICATIONS ----------------
-
 @app.route("/admin/manage_applications")
 @login_required
 def manage_applications():
@@ -551,9 +530,7 @@ def manage_applications():
     )
 
 
-# ==================================================
-# COMPANY SECTION
-# ==================================================
+
 
 
 @app.route("/company/register", methods=["GET", "POST"])
@@ -567,7 +544,7 @@ def company_register():
         location = request.form.get("location", "").strip()
         industry = request.form.get("industry", "").strip()
 
-        # -------- VALIDATION --------
+        
         if not name or not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for("company_register"))
@@ -584,7 +561,7 @@ def company_register():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if email already exists
+        
         cursor.execute("SELECT id FROM Company WHERE email = ?", (email,))
         existing_company = cursor.fetchone()
 
@@ -658,7 +635,7 @@ def company_login():
             flash("Invalid email or password.", "danger")
             return redirect(url_for("company_login"))
 
-        # update last login
+        
         cursor.execute("""
             UPDATE Company
             SET updated_at = CURRENT_TIMESTAMP
@@ -668,7 +645,7 @@ def company_login():
         conn.commit()
         conn.close()
 
-        # Flask-Login authentication
+        
         user = User(company["id"], "company")
         login_user(user, remember=True)
         session.permanent = True
@@ -696,7 +673,7 @@ def company_dashboard():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # ---------------- BASIC COUNTS ----------------
+    
     cursor.execute("SELECT COUNT(*) FROM PlacementDrive WHERE company_id=?", (company_id,))
     total_jobs = cursor.fetchone()[0]
 
@@ -723,7 +700,7 @@ def company_dashboard():
     if filter_type == "applications":
         return redirect(url_for("view_company_applications"))    
 
-    # ---------------- JOB LIST ----------------
+
 
     base_query = """
     SELECT PlacementDrive.*,
@@ -750,7 +727,7 @@ def company_dashboard():
     cursor.execute(base_query, params)
     jobs = cursor.fetchall()
 
-    # ---------------- APPLICATION TREND PER DRIVE ----------------
+    
     cursor.execute("""
         SELECT PlacementDrive.title,
                COUNT(Application.id) as total_apps
@@ -774,7 +751,7 @@ def company_dashboard():
             "percent": round(percent, 2)
         })
     
-    # -------- APPLICATION STATUS DISTRIBUTION --------
+    
 
     cursor.execute("""
         SELECT status, COUNT(*) as count
@@ -831,7 +808,7 @@ def post_drive():
         deadline = request.form["deadline"]
 
 
-    # -------- VALIDATION --------
+
 
         if not title or not location or not deadline:
             flash("Title, Location and Deadline are required.", "danger")
@@ -935,7 +912,7 @@ def toggle_drive_status(drive_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Ensure drive belongs to this company
+
     cursor.execute("""
         SELECT *
         FROM PlacementDrive
@@ -948,7 +925,7 @@ def toggle_drive_status(drive_id):
         conn.close()
         return "Unauthorized action"
 
-    # Correct column name
+    
     new_status = "Closed" if drive["drive_status"] == "Active" else "Active"
 
     cursor.execute("""
@@ -1037,7 +1014,7 @@ def company_update_status(application_id):
         conn.close()
         return "Invalid status."
 
-    # -------- FETCH APPLICATION + OWNERSHIP CHECK --------
+
     cursor.execute("""
         SELECT Application.student_id,
                Application.status,
@@ -1058,27 +1035,27 @@ def company_update_status(application_id):
     current_status = row["status"]
     drive_company_id = row["company_id"]
 
-    # -------- SECURITY: COMPANY CAN ONLY MODIFY ITS OWN DRIVE --------
+    
     if drive_company_id != company_id:
         conn.close()
         return "Unauthorized action."
 
-    # -------- PREVENT MODIFYING FINAL PLACEMENT --------
+
     if current_status == "Placed":
         conn.close()
         return "Placement is final and cannot be modified."
 
-    # -------- IF MARKING AS PLACED --------
+    
     if new_status == "Placed":
 
-        # Mark selected application as Placed
+        
         cursor.execute("""
             UPDATE Application
             SET status = 'Placed'
             WHERE id = ?
         """, (application_id,))
 
-        # Reject all other applications of this student
+        
         cursor.execute("""
             UPDATE Application
             SET status = 'Rejected'
@@ -1088,7 +1065,7 @@ def company_update_status(application_id):
         """, (student_id, application_id))
 
     else:
-        # Normal status update
+        
         cursor.execute("""
             UPDATE Application
             SET status = ?
@@ -1101,20 +1078,17 @@ def company_update_status(application_id):
     return redirect(url_for("company_dashboard"))
 
 
-# ==================================================
-# STUDENT SECTION
-# ==================================================
 
 @app.route("/student/register", methods=["GET", "POST"])
 def student_register():
     if request.method == "POST":
 
-        # ---- GET FORM DATA ----
+        
         full_name = request.form.get("full_name","").strip()
         email = request.form.get("email","").strip()
         password = request.form.get("password","")
 
-        # ---- VALIDATION ----
+        
         if not full_name or not email or not password:
             return "All fields are required."
 
@@ -1127,7 +1101,7 @@ def student_register():
         if len(password) < 6:
             return "Password must be at least 6 characters."
 
-        # ---- PASSWORD HASH ----
+        
         hashed_password = generate_password_hash(password)
 
         conn = get_db_connection()
@@ -1200,7 +1174,7 @@ def student_login():
 
     return render_template("student_login.html")
 
-# Student dashboard with search and filtering
+
 @app.route("/student/dashboard")
 @login_required
 def student_dashboard():
@@ -1215,12 +1189,12 @@ def student_dashboard():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # ---------------- GET STUDENT NAME ----------------
+    
     cursor.execute("SELECT full_name FROM Student WHERE id=?", (student_id,))
     student = cursor.fetchone()
     student_name = student["full_name"] if student else "Student"
 
-    # ---------------- CHECK IF PLACED ----------------
+    
     cursor.execute("""
         SELECT PlacementDrive.title,
                Company.name AS company_name
@@ -1233,7 +1207,7 @@ def student_dashboard():
     """, (student_id,))
     placement_info = cursor.fetchone()
 
-    # ---------------- AVAILABLE DRIVES ----------------
+    
     available_drives = []
 
     if not placement_info:
@@ -1275,7 +1249,7 @@ def student_dashboard():
         cursor.execute(base_query, params)
         available_drives = cursor.fetchall()
 
-    # ---------------- APPLIED DRIVES ----------------
+    
     cursor.execute("""
         SELECT PlacementDrive.title,
                Company.name AS company_name,
@@ -1289,7 +1263,7 @@ def student_dashboard():
     """, (student_id,))
     applied_drives = cursor.fetchall()
     
-    # ---------------- STATUS DISTRIBUTION (FOR CHART.JS) ----------------
+    
     cursor.execute("""
         SELECT status, COUNT(*) as count
         FROM Application
@@ -1315,11 +1289,8 @@ def student_dashboard():
     )
  
 
-# Placement Tracking System:
-# - Prevent duplicate applications
-# - Lock student after placement
-# - Snapshot resume at time of application
-# - Status lifecycle: Applied -> Shortlisted -> Interview -> Placed/Rejected
+
+
 
 @app.route("/student/profile", methods=["GET", "POST"])
 @login_required
@@ -1332,7 +1303,7 @@ def student_profile():
 
     if request.method == "POST":
 
-        # -------- GET FORM DATA --------
+        
         full_name = request.form.get("full_name")
         phone = request.form.get("phone")
         degree = request.form.get("degree")
@@ -1341,7 +1312,7 @@ def student_profile():
         cgpa = request.form.get("cgpa")
         skills = request.form.get("skills")
 
-        # -------- UPDATE BASIC PROFILE FIELDS --------
+        
         cursor.execute("""
             UPDATE Student
             SET full_name = ?,
@@ -1363,10 +1334,10 @@ def student_profile():
             student_id
         ))
 
-        # -------- HANDLE RESUME UPLOAD (SNAPSHOT SAFE) --------
+        
         file = request.files.get("resume")
 
-            # ---- VALIDATION ----
+            
         if file:
 
             if file.filename == "":
@@ -1377,29 +1348,29 @@ def student_profile():
                 flash("Only PDF files are allowed.", "danger")
                 return redirect(url_for("student_profile"))
 
-            # Get old resume name
+            
             cursor.execute("SELECT resume_path FROM Student WHERE id=?", (student_id,))
             old_resume_row = cursor.fetchone()
             old_resume = old_resume_row["resume_path"] if old_resume_row else None
 
-            # Save new resume first
+            
             filename = secure_filename(file.filename)
             unique_name = str(uuid.uuid4()) + "_" + filename
 
-            upload_folder = "uploads"
-            if not os.path.exists(upload_folder):
-                os.makedirs(upload_folder)
+            UPLOAD_FOLDER = "static/uploads"
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER)
 
-            file.save(os.path.join(upload_folder, unique_name))
+            file.save(os.path.join(UPLOAD_FOLDER, unique_name))
 
-            # Update student resume_path
+            
             cursor.execute("""
                 UPDATE Student
                 SET resume_path = ?
                 WHERE id = ?
             """, (unique_name, student_id))
 
-            # Delete old resume only if not referenced by any application
+            
             if old_resume:
                 cursor.execute("""
                     SELECT COUNT(*) FROM Application
@@ -1408,13 +1379,13 @@ def student_profile():
                 count = cursor.fetchone()[0]
 
                 if count == 0:
-                    old_path = os.path.join(upload_folder, old_resume)
+                    old_path = os.path.join(UPLOAD_FOLDER, old_resume)
                     if os.path.exists(old_path):
                         os.remove(old_path)
 
         conn.commit()
 
-    # -------- FETCH UPDATED STUDENT DATA --------
+    
     cursor.execute("SELECT * FROM Student WHERE id=?", (student_id,))
     student = cursor.fetchone()
 
@@ -1433,7 +1404,7 @@ def apply_drive(drive_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # -------- BLOCK IF STUDENT ALREADY PLACED --------
+    # check if already placed
     cursor.execute("""
         SELECT COUNT(*) FROM Application
         WHERE student_id = ?
@@ -1444,7 +1415,7 @@ def apply_drive(drive_id):
         conn.close()
         return "You are already placed and cannot apply."
 
-    # -------- VALIDATE DRIVE --------
+    # get drive info
     cursor.execute("""
         SELECT PlacementDrive.*, Company.name AS company_name
         FROM PlacementDrive
@@ -1461,7 +1432,7 @@ def apply_drive(drive_id):
         conn.close()
         return "Drive not available."
 
-    # -------- CHECK STUDENT RESUME --------
+    # get student's current resume
     cursor.execute("SELECT resume_path FROM Student WHERE id=?", (student_id,))
     resume_row = cursor.fetchone()
 
@@ -1471,7 +1442,7 @@ def apply_drive(drive_id):
 
     current_resume = resume_row["resume_path"]
 
-    # -------- CHECK EXISTING APPLICATION --------
+    # check if already applied
     cursor.execute("""
         SELECT * FROM Application
         WHERE student_id = ?
@@ -1480,12 +1451,10 @@ def apply_drive(drive_id):
 
     existing_application = cursor.fetchone()
 
-    # -------- LOCK EDIT IF STATUS CHANGED --------
     if existing_application and existing_application["status"] != "Applied":
         conn.close()
         return "Application can no longer be edited."
 
-    # -------- HANDLE FORM SUBMISSION --------
     if request.method == "POST":
 
         related_work = request.form.get("related_work")
@@ -1497,7 +1466,7 @@ def apply_drive(drive_id):
             return "All fields are required."
 
         if existing_application:
-            # UPDATE
+
             cursor.execute("""
                 UPDATE Application
                 SET related_work = ?,
@@ -1512,8 +1481,25 @@ def apply_drive(drive_id):
                 student_id,
                 drive_id
             ))
+
         else:
-            # INSERT WITH RESUME SNAPSHOT
+
+            # ---------- RESUME SNAPSHOT CREATION ----------
+            import os
+            import shutil
+
+            source = os.path.join("static/uploads", current_resume)
+
+            snapshot_name = "snapshot_" + current_resume
+
+            destination = os.path.join("static/uploads", snapshot_name)
+
+            if os.path.exists(source):
+                shutil.copy(source, destination)
+            else:
+                snapshot_name = current_resume
+            # ----------------------------------------------
+
             cursor.execute("""
                 INSERT INTO Application (
                     student_id,
@@ -1527,7 +1513,7 @@ def apply_drive(drive_id):
             """, (
                 student_id,
                 drive_id,
-                current_resume,
+                snapshot_name,
                 related_work,
                 related_projects,
                 job_fit_statement
@@ -1544,9 +1530,6 @@ def apply_drive(drive_id):
         existing_application=existing_application
     )
 
-# ==================================================
-# LOGOUT
-# ==================================================
 
 @app.route("/logout")
 @login_required
@@ -1556,11 +1539,7 @@ def logout():
     return redirect(url_for("home"))
 
 
-#===============================
-#API SECTION (JSON BASED)
-#=============================
 
-#GET all students
 @app.route("/api/students", methods=["GET"])
 def api_get_students():
 
@@ -1575,7 +1554,6 @@ def api_get_students():
     return jsonify([dict(row) for row in students])
 
 
-#GET single student
 @app.route("/api/students/<int:student_id>", methods=["GET"])
 def api_get_student(student_id):
 
@@ -1592,7 +1570,7 @@ def api_get_student(student_id):
 
     return jsonify(dict(student))
 
-#POST create student
+
 @app.route("/api/students", methods=["POST"])
 def api_create_student():
 
@@ -1624,8 +1602,7 @@ def api_create_student():
     except sqlite3.IntegrityError:
         conn.close()
         return jsonify({"error": "Email already exists"}), 400
-    
-#PUT update student
+
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 def api_update_student(student_id):
 
@@ -1654,7 +1631,7 @@ def api_update_student(student_id):
 
     return jsonify({"message": "Student updated"})
 
-#DELETE student
+
 @app.route("/api/students/<int:student_id>", methods=["DELETE"])
 def api_delete_student(student_id):
 
@@ -1667,8 +1644,7 @@ def api_delete_student(student_id):
 
     return jsonify({"message": "Student deleted"})
 
-#PLACEMENT DRIVE API
-#GET drives
+
 @app.route("/api/drives", methods=["GET"])
 def api_get_drives():
 
@@ -1708,7 +1684,7 @@ def api_get_drives():
 
     return jsonify([dict(row) for row in drives])
 
-#APPLICATION API
+
 @app.route("/api/applications", methods=["GET"])
 def api_get_applications():
 
@@ -1731,11 +1707,6 @@ def api_get_applications():
 
     return jsonify([dict(row) for row in applications])
 
-
-
-# ==================================================
-# RUN APP
-# ==================================================
 
 if __name__ == "__main__":
     app.run(debug=True)

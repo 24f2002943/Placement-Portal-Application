@@ -49,16 +49,21 @@
 
     <h3>Resume</h3>
 
-    <label>Upload / Update Resume:</label><br>
-    <input type="file" name="resume"><br><br>
+<label>Upload / Update Resume:</label><br>
+<input type="file" name="resume"><br><br>
 
-    {% if student['resume_path'] %}
-        <p><strong>Current Resume:</strong> {{ student['resume_path'] }}</p>
-    {% else %}
-        <p><strong>No resume uploaded yet.</strong></p>
-    {% endif %}
+{% if student['resume_path'] %}
+<p>
+<strong>Current Resume:</strong>
+<a href="{{ url_for('static', filename='uploads/' + student['resume_path']) }}" target="_blank">
+    View Resume
+</a>
+</p>
+{% else %}
+<p><strong>No resume uploaded yet.</strong></p>
+{% endif %}
 
-    <button type="submit">Save Profile</button>
+<button type="submit">Save Profile</button>
 
 </form>
 
