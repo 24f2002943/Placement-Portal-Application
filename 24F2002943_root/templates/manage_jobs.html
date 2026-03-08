@@ -77,29 +77,29 @@ value="{{ search_query }}">
 
     {% for job in jobs %}
     <tr>
-        <!-- Based on PlacementDrive structure -->
-        <td>{{ job[0] }}</td> <!-- id -->
-        <td>{{ job[-1] }}</td> <!-- Company.name from JOIN -->
-        <td>{{ job[2] }}</td> <!-- title -->
-        <td>{{ job[4] }}</td> <!-- location -->
+        
+        <td>{{ job[0] }}</td>
+        <td>{{ job[-1] }}</td> 
+        <td>{{ job[2] }}</td> 
+        <td>{{ job[4] }}</td> 
 
         <td>
             {{ job[7] }} - {{ job[8] }}
-        </td> <!-- min_salary - max_salary -->
+        </td> 
 
-        <td>{{ job[9] }}</td> <!-- deadline -->
+        <td>{{ job[9] }} </td> 
 
         <td>
             {% if job[10] == "Approved" %}
-                <span class="status-approved">Approved</span>
+                <span class   = "status-approved">Approved</span>
             {% elif job[10] == "Rejected" %}
-                <span class="status-rejected">Rejected</span>
+                <span  class="status-rejected">Rejected</span>
             {% else %}
-                <span class="status-pending">Pending</span>
+                <span class ="status-pending">Pending</span>
             {% endif %}
         </td>
 
-        <td>{{ job[11] }}</td> <!-- drive_status -->
+        <td>{{ job[11] }}  </td> 
 
         <td>
             {% if job[10] == "Pending" %}

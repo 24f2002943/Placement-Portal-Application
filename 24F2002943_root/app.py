@@ -363,7 +363,7 @@ def admin_view_companies():
     companies = cursor.fetchall()
     conn.close()
 
-    return render_template("admin_companies.html", companies=companies)
+    return render_template("manage_companies.html", companies=companies)
 
 
 @app.route("/admin/company/approve/<int:company_id>")
@@ -1706,7 +1706,6 @@ def api_get_applications():
     conn.close()
 
     return jsonify([dict(row) for row in applications])
-
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<title>Student Login</title>
+<title>Company Login</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -10,17 +10,15 @@
 
 <style>
 
-/* Background image */
-
 body{
-background:url("{{ url_for('static', filename='images/student_dashboard.jpg') }}");
+margin:0;
+background:url("{{ url_for('static', filename='images/company_dashboard.png') }}");
 background-size:cover;
 background-position:center;
 background-repeat:no-repeat;
-margin:0;
 }
 
-/* Dark overlay */
+
 
 body::before{
 content:"";
@@ -29,13 +27,12 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.55);
 z-index:-1;
 }
 
-/* Center layout */
 
-.login-wrapper{
+.page-wrapper{
 height:100vh;
 display:flex;
 flex-direction:column;
@@ -43,47 +40,39 @@ justify-content:center;
 align-items:center;
 }
 
-/* Portal headline */
 
 .portal-title{
 color:white;
 font-size:40px;
 font-weight:700;
 letter-spacing:1px;
-margin-bottom:25px;
+margin-bottom:35px;
 text-align:center;
 }
-
-/* Login card */
 
 .login-box{
 width:420px;
 background:white;
 padding:40px;
 border-radius:12px;
-box-shadow:0 10px 30px rgba(0,0,0,0.3);
+box-shadow:0 12px 30px rgba(0,0,0,0.35);
 }
+
 
 .login-box h2{
 text-align:center;
 margin-bottom:25px;
 }
 
-/* Login button */
 
 .btn-login{
 width:100%;
 }
 
-/* Links */
 
 .links{
 text-align:center;
-margin-top:18px;
-}
-
-.links a{
-text-decoration:none;
+margin-top:15px;
 }
 
 </style>
@@ -92,7 +81,7 @@ text-decoration:none;
 
 <body>
 
-<div class="login-wrapper">
+<div class="page-wrapper">
 
 <h1 class="portal-title">
 Placement Portal Application
@@ -100,9 +89,8 @@ Placement Portal Application
 
 <div class="login-box">
 
-<h2>Student Login</h2>
+<h2>Company Login</h2>
 
-<!-- Flash Messages -->
 
 {% with messages = get_flashed_messages() %}
 {% if messages %}
@@ -118,14 +106,15 @@ Placement Portal Application
 {% endif %}
 {% endwith %}
 
-<form method="POST" action="{{ url_for('student_login') }}">
+
+<form method="POST" action="{{ url_for('company_login') }}">
 
 <div class="mb-3">
 
-<label class="form-label">Email</label>
+<label  class="form-label ">Email</label>
 
 <input
-type="email"
+type= "email"
 name="email"
 class="form-control"
 placeholder="Enter email"
@@ -134,7 +123,7 @@ required>
 </div>
 
 
-<div class="mb-3">
+<div  class="mb-3">
 
 <label class="form-label">Password</label>
 
@@ -148,22 +137,22 @@ required>
 </div>
 
 
-<button type="submit" class="btn btn-primary btn-login">
+<button type="submit"  class="btn btn-primary btn-login">
 Login
 </button>
 
 </form>
 
 
-<div class="links">
+<div  class="links">
 
-<a href="{{ url_for('student_register') }}">
-New Student? Register
+<a href="{{ url_for('company_register') }}">
+New Company? Register
 </a>
 
 <br><br>
 
-<a href="{{ url_for('home') }}">
+<a  href="{{ url_for('home') }}">
 Back to Home
 </a>
 

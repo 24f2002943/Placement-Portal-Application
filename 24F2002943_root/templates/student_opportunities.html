@@ -21,20 +21,20 @@
                 <b>CTC:</b> {{ job[5] }}
             </p>
 
-            <a href="{{ url_for('apply_opportunity', opportunity_id=job[0]) }}">
-                Apply Now
-            </a>
+            <a href="{{  url_for('apply_opportunity', opportunity_id=job[0]) }}">
+                Apply Now 
+            </a >
 
         </li>
         <hr>
-    {% endfor %}
-    </ul>
+    {%  endfor %}
+    </ul >
 {% else %}
-    <p>No opportunities available currently.</p>
+    <p>   No opportunities available currently.</p>
 {% endif %}
 
 <br>
-<a href="{{ url_for('student_dashboard') }}">Back to Dashboard</a>
+<a href="{{   url_for('student_dashboard') }}">Back to Dashboard</a>
 
 </body>
-</html>
+</html  >

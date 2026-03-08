@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<title>Company Login</title>
+<title>Student Login</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -10,17 +10,16 @@
 
 <style>
 
-/* background image */
 
 body{
-margin:0;
-background:url("{{ url_for('static', filename='images/company_dashboard.png') }}");
+background:url("{{ url_for('static', filename='images/student_dashboard.jpg') }}");
 background-size:cover;
 background-position:center;
 background-repeat:no-repeat;
+margin:0;
 }
 
-/* overlay */
+
 
 body::before{
 content:"";
@@ -29,13 +28,13 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.55);
+background:rgba(0,0,0,0.6);
 z-index:-1;
 }
 
-/* page wrapper */
 
-.page-wrapper{
+
+.login-wrapper{
 height:100vh;
 display:flex;
 flex-direction:column;
@@ -43,45 +42,44 @@ justify-content:center;
 align-items:center;
 }
 
-/* portal title */
 
 .portal-title{
 color:white;
 font-size:40px;
 font-weight:700;
 letter-spacing:1px;
-margin-bottom:35px;
+margin-bottom:25px;
 text-align:center;
 }
 
-/* login box */
 
 .login-box{
 width:420px;
 background:white;
 padding:40px;
 border-radius:12px;
-box-shadow:0 12px 30px rgba(0,0,0,0.35);
+box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
-
-/* heading */
 
 .login-box h2{
 text-align:center;
 margin-bottom:25px;
 }
 
-/* login button */
+
 
 .btn-login{
 width:100%;
 }
 
-/* links */
 
 .links{
 text-align:center;
-margin-top:15px;
+margin-top:18px;
+}
+
+.links a{
+text-decoration:none;
 }
 
 </style>
@@ -90,7 +88,7 @@ margin-top:15px;
 
 <body>
 
-<div class="page-wrapper">
+<div class="login-wrapper">
 
 <h1 class="portal-title">
 Placement Portal Application
@@ -98,7 +96,7 @@ Placement Portal Application
 
 <div class="login-box">
 
-<h2>Company Login</h2>
+<h2>Student Login</h2>
 
 
 {% with messages = get_flashed_messages() %}
@@ -115,8 +113,7 @@ Placement Portal Application
 {% endif %}
 {% endwith %}
 
-
-<form method="POST" action="{{ url_for('company_login') }}">
+<form method="POST" action="{{ url_for('student_login') }}">
 
 <div class="mb-3">
 
@@ -155,8 +152,8 @@ Login
 
 <div class="links">
 
-<a href="{{ url_for('company_register') }}">
-New Company? Register
+<a href="{{ url_for('student_register') }}">
+New Student? Register
 </a>
 
 <br><br>

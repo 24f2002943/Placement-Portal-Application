@@ -16,19 +16,19 @@ font-family:Arial;
 background:#f4f6f9;
 }
 
-/* Layout */
+
 
 .layout{
 display:flex;
-height:100vh;
+height: 100vh;
 }
 
-/* Sidebar */
+
 
 .sidebar{
 width:240px;
 background:#ffffff;
-border-right:1px solid #e0e0e0;
+border-right:1px solid #895555;
 padding:20px;
 }
 
@@ -47,10 +47,10 @@ border-radius:6px;
 }
 
 .sidebar a:hover{
-background:#f1f1f1;
+background: #f1f1f1;
 }
 
-/* Main area */
+
 
 .main{
 flex:1;
@@ -58,28 +58,27 @@ display:flex;
 flex-direction:column;
 }
 
-/* Topbar */
+
 
 .topbar{
 background:white;
-padding:15px 25px;
-border-bottom:1px solid #e0e0e0;
+padding : 15px 25px;
+border-bottom :    1px solid #e0e0e0;
 display:flex;
 justify-content:space-between;
 align-items:center;
 }
 
-/* Page content */
 
-.content{
+.content {
 padding:30px;
-overflow:auto;
+overflow  : auto;
 }
 
-/* Flash messages */
 
-.flash{
-margin-bottom:15px;
+
+.flash  {
+margin-bottom : 15px;
 }
 
 </style>
@@ -90,7 +89,7 @@ margin-bottom:15px;
 
 <div class="layout">
 
-<!-- SIDEBAR -->
+
 
 <div class="sidebar">
 
@@ -123,11 +122,8 @@ margin-bottom:15px;
 </div>
 
 
-<!-- MAIN AREA -->
-
 <div class="main">
 
-<!-- TOPBAR -->
 
 <div class="topbar">
 
@@ -148,11 +144,7 @@ Logout
 </div>
 
 
-<!-- CONTENT -->
-
 <div class="content">
-
-<!-- FLASH MESSAGES -->
 
 {% with messages = get_flashed_messages() %}
 {% if messages %}

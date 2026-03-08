@@ -6,7 +6,7 @@
 <body>
 
 <h2>Company Registration</h2>
-<!-- Flash Messages -->
+
 {% with messages = get_flashed_messages() %}
   {% if messages %}
     {% for message in messages %}
@@ -26,10 +26,10 @@
     <label>Location:</label><br>
     <input type="text" name="location" required><br><br>
 
-    <!-- ADD THIS BLOCK HERE -->
+    
     <label>Industry:</label><br>
     <input type="text" name="industry" required><br><br>
-    <!-- END BLOCK -->
+    
 
     <label>Password:</label><br>
     <input type="password" name="password" required><br><br>

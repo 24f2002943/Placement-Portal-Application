@@ -154,8 +154,6 @@ Apply
 {% endif %}
 
 
-<!-- ================= APPLICATION STATUS ================= -->
-
 <div class="section">
 
 <h4>Your Applications</h4>
@@ -167,10 +165,10 @@ Apply
 <thead class="table-dark">
 
 <tr>
-<th>Company</th>
-<th>Drive</th>
-<th>Status</th>
-<th>Date</th>
+<th> Company</th>
+<th> Drive</th>
+<th>Status </th>
+<th>Date  </th>
 </tr>
 
 </thead>
@@ -182,44 +180,44 @@ Apply
 <tr>
 
 <td>{{ app.company_name }}</td>
-<td>{{ app.title }}</td>
+<td>{{  app.title }}</td>
 
 <td>
 
-{% if app.status == "Placed" %}
+{% if  app.status == "Placed" %}
 <span class="badge bg-success">Placed</span>
 
 {% elif app.status == "Shortlisted" %}
-<span class="badge bg-warning text-dark">Shortlisted</span>
+<span  class="badge bg-warning text-dark">Shortlisted</span>
 
 {% elif app.status == "Interview" %}
-<span class="badge bg-info">Interview</span>
+<span class="badge  bg-info">Interview</span>
 
 {% elif app.status == "Rejected" %}
-<span class="badge bg-danger">Rejected</span>
+<span class="badge bg-danger ">Rejected </span>
 
 {% else %}
-<span class="badge bg-secondary">{{ app.status }}</span>
+<span  class="badge bg-secondary">{{  app.status }}</span>
 
 {% endif %}
 
 </td>
 
-<td>{{ app.applied_at }}</td>
+<td> {{ app.applied_at }}</td>
 
 </tr>
 
-{% endfor %}
+{% endfor  %}
 
 </tbody>
 
-</table>
+</table >
+
+</div >
 
 </div>
 
 </div>
 
-</div>
-
-</body>
+</body >
 </html>
