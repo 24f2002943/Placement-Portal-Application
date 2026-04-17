@@ -1,125 +1,101 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Apply for Drive</title>
+{% extends "base.html" %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+{% block title %}Apply for {{ drive['title'] }} - Placement Portal{% endblock %}
 
-<body class="bg-light">
+{% block page_title %}Job Application{% endblock %}
 
-<div class="container mt-5">
-
-    <div class="card shadow">
-        <div class="card-body">
-
-            <h3 class="mb-3">
-                Apply for {{ drive['title'] }}
-            </h3>
-        
-            <p class="mb-1">
-                <strong>Company:</strong> {{ drive['company_name'] }}
-            </p>
-
-            <p class="mb-1">
-                <strong>Location:</strong> {{ drive['location'] }}
-            </p>
-
-            <p class="mb-1">
-                <strong>Deadline:</strong> {{ drive['deadline'] }}
-            </p>
-
-            <hr>
-
-            <form method="POST">
-
-
-<div class="mb-3">
-<label class="form-label"><strong>Related Work</strong></label>
-
-<textarea
-name="related_work"
-class="form-control"
-rows="4"
-required
-minlength="20"
-maxlength="800"
-placeholder="Describe your internship experience, technical work, or industry exposure relevant to this role."
->{{ existing_application['related_work'] if existing_application else '' }}</textarea>
-
-<small class="text-muted">
-Minimum 20 characters. Mention internships, SDLC work, tools used, etc.
-</small>
-
-</div>
-
-
-<div class="mb-3">
-<label class="form-label"><strong>Related Projects</strong></label>
-
-<textarea
-name="related_projects"
-class="form-control"
-rows="4"
-required
-minlength="20"
-maxlength="800"
-placeholder="Describe projects related to this job role, technologies used, and challenges solved."
->{{ existing_application['related_projects'] if existing_application else '' }}</textarea>
-
-<small class="text-muted">
-Mention technologies, architecture, and what problem your project solved.
-</small>
-
-</div>
-
-
-<div class="mb-3">
-<label class="form-label"><strong>Why are you a good fit?</strong></label>
-
-<textarea
-name="job_fit_statement"
-class="form-control"
-rows="4"
-required
-minlength="30"
-maxlength="800"
-placeholder="Explain why your skills, projects, and experience make you suitable for this position."
->{{ existing_application['job_fit_statement'] if existing_application else '' }}</textarea>
-
-<small class="text-muted">
-Explain your skills, achievements, and alignment with the job role.
-</small>
-
-</div>
-
-
-<button type="submit" class="btn btn-primary">
-Submit Application
-</button>
-
-</form>
-
-               
-                <div class="d-flex justify-content-between">
-
-                    <a href="{{ url_for('student_dashboard') }}"
-                       class="btn btn-secondary">
-                        Back
-                    </a>
-
-                    <button type="submit" class="btn btn-primary">
-                        {{ "Update Application" if existing_application else "Submit Application" }}
-                    </button>
-
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Job Brief Card -->
+            <div class="card mb-4 border-0 shadow-sm overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="bg-primary p-4 text-white">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="avatar-circle bg-white text-primary me-3">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                            <h3 class="mb-0 fw-bold">{{ drive['title'] }}</h3>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3 opacity-75">
+                            <span><i class="fas fa-building me-1"></i> {{ drive['company_name'] }}</span>
+                            <span><i class="fas fa-map-marker-alt me-1"></i> {{ drive['location'] }}</span>
+                            <span><i class="fas fa-clock me-1"></i> Deadline: {{ drive['deadline'] }}</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-            </form>
+            <!-- Application Form -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-1">Professional Questionnaire</h5>
+                        <p class="text-muted small">Please provide detailed information to enhance your application.</p>
+                    </div>
 
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Related Work Experience</label>
+                            <textarea
+                                name="related_work"
+                                class="form-control"
+                                rows="4"
+                                required
+                                minlength="20"
+                                maxlength="800"
+                                placeholder="Describe your internship experience, technical work, or industry exposure relevant to this role."
+                            >{{ existing_application['related_work'] if existing_application else '' }}</textarea>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i> Mention internships, SDLC work, tools used (min 20 chars).
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Related Projects</label>
+                            <textarea
+                                name="related_projects"
+                                class="form-control"
+                                rows="4"
+                                required
+                                minlength="20"
+                                maxlength="800"
+                                placeholder="Describe projects related to this job role, technologies used, and challenges solved."
+                            >{{ existing_application['related_projects'] if existing_application else '' }}</textarea>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i> Explain architecture, stack, and problem solved.
+                            </div>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="form-label fw-semibold">Statement of Purpose / Why you?</label>
+                            <textarea
+                                name="job_fit_statement"
+                                class="form-control"
+                                rows="4"
+                                required
+                                minlength="30"
+                                maxlength="800"
+                                placeholder="Explain why your skills, projects, and experience make you suitable for this position."
+                            >{{ existing_application['job_fit_statement'] if existing_application else '' }}</textarea>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i> Highlight your unique value and alignment with the role (min 30 chars).
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-5 py-2">
+                                {{ "Save Changes" if existing_application else "Submit Application" }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
-
-</body>
-</html>
+{% endblock %}

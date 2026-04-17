@@ -1,160 +1,47 @@
-<!DOCTYPE html>
-<html>
-<head>
+{% extends "base.html" %}
 
-<title>Admin Login</title>
+{% block title %}Admin Login - Placement Portal{% endblock %}
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+{% block main_content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="text-center mb-5">
+            <div class="mb-3 text-primary">
+                <i class="fas fa-user-shield fa-3x"></i>
+            </div>
+            <h2 class="fw-bold text-primary">Admin Access</h2>
+            <p class="text-muted">Enter administrative credentials to proceed.</p>
+        </div>
 
-<style>
+        <form method="POST" action="{{ url_for('admin_login') }}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-user text-muted"></i></span>
+                    <input type="text" name="username" class="form-control border-start-0 ps-0" placeholder="admin_user" required>
+                </div>
+            </div>
 
-body{
-font-family:Arial, sans-serif;
-margin:0;
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                    <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="••••••••" required>
+                </div>
+            </div>
 
-background:url("{{ url_for('static', filename='images/admin_dashboard.png') }}");
-background-size:cover;
-background-position:center;
-background-repeat:no-repeat;
-}
+            <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
+                Secure Login
+            </button>
+        </form>
 
-
-
-body::before{
-content:"";
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(255,255,255,0.45);
-z-index:-1;
-}
-
-
-.page-wrapper{
-height:100vh;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-}
-
-
-.portal-title{
-font-size:40px;
-font-weight:700;
-color:#1b1b1b;
-letter-spacing:1px;
-margin-bottom:35px;
-text-align:center;
-}
-
-
-
-.login-box{
-background:white;
-padding:35px;
-width:360px;
-border-radius:10px;
-box-shadow:0 10px 30px rgba(0,0,0,0.25);
-text-align:center;
-}
-
-
-.login-box h2{
-margin-bottom:25px;
-}
-
-
-
-input{
-width:100%;
-padding:12px;
-margin:10px 0;
-border:1px solid #ccc;
-border-radius:6px;
-font-size:14px;
-}
-
-
-
-button{
-width:100%;
-padding:12px;
-background:#007BFF;
-color:white;
-border:none;
-border-radius:6px;
-font-size:15px;
-cursor:pointer;
-}
-
-button:hover{
-background:#0056b3;
-}
-
-
-
-.error{
-color:red;
-margin-top:12px;
-font-size:14px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="page-wrapper">
-
-<h1 class="portal-title">
-Placement Portal Application
-</h1>
-
-<div class="login-box">
-
-<h2>Admin Login</h2>
-
-<form method="POST">
-
-<input
-type="text"
-name="username"
-placeholder="Enter Username"
-required>
-
-<input
-type="password"
-name="password"
-placeholder="Enter Password"
-required>
-
-<button type="submit">
-Login
-</button>
-
-</form>
-
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-
-<div class="error">
-
-{% for message in messages %}
-<p>{{ message }}</p>
-{% endfor %}
-
+        <hr class="my-4 text-muted opacity-25">
+        
+        <div class="text-center">
+            <a href="{{ url_for('home') }}" class="text-muted text-decoration-none small">
+                <i class="fas fa-arrow-left me-1"></i> Back to Homepage
+            </a>
+        </div>
+    </div>
 </div>
-
-{% endif %}
-{% endwith %}
-
-</div>
-
-</div>
-
-</body>
-</html>
+{% endblock %}

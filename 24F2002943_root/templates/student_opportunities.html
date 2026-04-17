@@ -1,40 +1,76 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Available Opportunities</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h2>Available Opportunities</h2>
-<hr>
+{% block title %}Available Opportunities - Placement Portal{% endblock %}
 
-{% if opportunities %}
-    <ul>
-    {% for job in opportunities %}
-        <li style="margin-bottom:20px;">
-            
-            <strong>{{ job[2] }}</strong><br>
-            
-            <p>
-                <b>Description:</b> {{ job[3] }}<br>
-                <b>Location:</b> {{ job[4] }}<br>
-                <b>CTC:</b> {{ job[5] }}
-            </p>
+{% block page_title %}Placement Opportunities{% endblock %}
 
-            <a href="{{  url_for('apply_opportunity', opportunity_id=job[0]) }}">
-                Apply Now 
-            </a >
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-5 justify-content-center text-center">
+        <div class="col-lg-6">
+            <h2 class="fw-bold">Explore New Career Paths</h2>
+            <p class="text-muted">Stay active and apply for all opportunities that match your skill set.</p>
+        </div>
+    </div>
 
-        </li>
-        <hr>
-    {%  endfor %}
-    </ul >
-{% else %}
-    <p>   No opportunities available currently.</p>
-{% endif %}
+    <div class="row g-4">
+        {% if opportunities %}
+            {% for job in opportunities %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0 opportunity-card-hover">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="avatar-circle bg-amber-subtle text-amber">
+                                    <i class="fas fa-lightbulb"></i>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary">New Opp</span>
+                            </div>
+                            
+                            <h5 class="fw-bold mb-2">{{ job[2] }}</h5>
+                            
+                            <div class="mb-4">
+                                <p class="text-muted small line-clamp-2 mb-3">{{ job[3] }}</p>
+                                <div class="d-flex align-items-center mb-2 text-muted small">
+                                    <i class="fas fa-map-marker-alt me-2"></i> {{ job[4] }}
+                                </div>
+                                <div class="d-flex align-items-center text-indigo fw-semibold small">
+                                    <i class="fas fa-coins me-2"></i> {{ job[5] }}
+                                </div>
+                            </div>
+                            
+                            <a href="{{ url_for('apply_opportunity', opportunity_id=job[0]) }}" class="btn btn-primary w-100 py-2 fw-bold">
+                                Quick Apply <i class="fas fa-bolt ms-1 small"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="bg-white p-5 rounded-4 shadow-sm d-inline-block">
+                    <i class="fas fa-ghost fa-4x mb-4 text-muted opacity-25"></i>
+                    <h3 class="fw-bold">Nothing found yet</h3>
+                    <p class="text-muted">We'll notify you when new opportunities arise.</p>
+                    <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-primary mt-3">Go Back Home</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
 
-<br>
-<a href="{{   url_for('student_dashboard') }}">Back to Dashboard</a>
-
-</body>
-</html  >
+<style>
+    .opportunity-card-hover {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .opportunity-card-hover:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important;
+    }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;  
+        overflow: hidden;
+    }
+</style>
+{% endblock %}

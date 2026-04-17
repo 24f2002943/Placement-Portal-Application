@@ -1,51 +1,83 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manage Applications</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h2>Manage Applications</h2>
+{% block title %}Manage Applications - Placement Portal{% endblock %}
 
-<form method="GET" class="mb-3">
+{% block page_title %}Job Applications{% endblock %}
 
-<div class="input-group">
+{% block content %}
+<div class="container-fluid">
+    <!-- Search & Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-center">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0" placeholder="Search by student name or job title..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{{ url_for('manage_applications') }}" class="btn btn-outline-secondary w-100">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<input
-type="text"
-name="search"
-class="form-control"
-placeholder="Search by student name or job title"
-value="{{ search_query }}">
-
-<button class="btn btn-primary">
-Search
-</button>
-
+    <!-- Applications Table -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Application ID</th>
+                        <th>Student Candidate</th>
+                        <th>Placement Drive</th>
+                        <th>Current Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>
+                            <span class="fw-bold text-muted">#APP{{ app["id"] }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-3" style="background: #f0fdf4; color: #16a34a;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="fw-bold">{{ app["student_name"] }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-primary">{{ app["drive_title"] }}</div>
+                        </td>
+                        <td>
+                            {% if app["status"] == 'Pending' %}
+                                <span class="badge bg-amber-subtle text-amber">Under Review</span>
+                            {% elif app["status"] == 'Approved' %}
+                                <span class="badge bg-success-subtle text-success">Approved</span>
+                            {% elif app["status"] == 'Rejected' %}
+                                <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">{{ app["status"] }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="far fa-folder-open fa-3x mb-3 opacity-25"></i>
+                            <p>No job applications found matching your search.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-
-</form>
-
-<table border="1" cellpadding="10">
-    <tr>
-        <th>ID</th>
-        <th>Student</th>
-        <th>Placement Drive</th>
-        <th>Status</th>
-    </tr>
-
-    {% for app in applications %}
-    <tr>
-        <td>{{ app["id"] }}</td>
-        <td>{{ app["student_name"] }}</td>
-        <td>{{ app["drive_title"] }}</td>
-        <td>{{ app["status"] }}</td>
-    </tr>
-    {% endfor %}
-</table>
-
-<br>
-<a href="/admin/dashboard">Back to Dashboard</a>
-
-</body>
-</html>
+{% endblock %}

@@ -1,85 +1,67 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>All Applications</title>
+{% extends "base.html" %}
 
-<style>
+{% block title %}All Student Applications - Placement Portal{% endblock %}
 
-body{
-    font-family:Arial;
-    margin:30px;
-}
+{% block page_title %}Comprehensive Applications Log{% endblock %}
 
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-table,th,td{
-    border:1px solid #999;
-}
-
-th,td{
-    padding: 10px;
-    text-align  :center;
-}
-
-th{
-    background:#e0e0e0;
-}
-
-.btn{
-    padding:6px 10px;
-    text-decoration:none;
-    border-radius :4px;
-    background :#343a40;
-    color   :white;
-}
-
-</style>
-
-</head>
-<body>
-
-<h2>All Applications</h2>
-
-<a href="{{ url_for('company_dashboard') }}" class="btn">
-Back to Dashboard
-</a>
-
-<br><br>
-
-{% if applications %}
-
-<table>
-
-<tr>
-<th>Student</th>
-<th>Drive</th>
-<th>Status</th>
-<th>Applied At</th>
-</tr>
-
-{% for app in applications %}
-
-<tr>
-
-<td>{{ app.full_name }}</td>
-<td>{{ app.title }}</td>
-<td>{{ app.status }}</td>
-<td>{{ app.applied_at }}</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
-{% else %}
-
-<p>No applications found.</p>
-
-{% endif %}
-
-</body>
-</html>
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-bold mb-0">Total Applications Overview</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Candidate Name</th>
+                        <th>Applied Placement Drive</th>
+                        <th>Current Progress</th>
+                        <th>Application Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-3" style="background: #eef2ff; color: #4f46e5;">
+                                    {{ app.full_name[0] | upper }}
+                                </div>
+                                <span class="fw-bold">{{ app.full_name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-primary">{{ app.title }}</div>
+                        </td>
+                        <td>
+                            {% if app["status"] == 'Pending' or app["status"] == 'Applied' %}
+                                <span class="badge bg-amber-subtle text-amber">In Review</span>
+                            {% elif app["status"] == 'Shortlisted' or app["status"] == 'Interview' %}
+                                <span class="badge bg-primary-subtle text-primary">{{ app["status"] }}</span>
+                            {% elif app["status"] == 'Placed' %}
+                                <span class="badge bg-success text-white">Placed</span>
+                            {% elif app["status"] == 'Rejected' %}
+                                <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">{{ app["status"] }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-muted small"><i class="far fa-calendar-alt me-1"></i> {{ app.applied_at }}</div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="fas fa-history fa-3x mb-3 opacity-25"></i>
+                            <p>No historical applications found in your logs.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

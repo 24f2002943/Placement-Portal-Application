@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 placement_portal.db
 static/uploads/
+.env
+.gemini/

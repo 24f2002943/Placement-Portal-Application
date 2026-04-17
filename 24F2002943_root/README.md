@@ -33,11 +33,19 @@ Students can apply to placement drives, companies can manage applicants, and adm
 ## 🧰 Technologies Used
 
 - **Flask** – Backend web framework  
-- **SQLite** – Database engine  
+- **Supabase (PostgreSQL)** – Cloud database engine  
 - **Jinja2** – Template rendering engine  
 - **Bootstrap 5** – Responsive frontend UI  
 - **Chart.js** – Data visualization charts  
 - **Flask-Login** – Authentication and session management  
+
+---
+
+## 💎 Advanced RDBMS Features
+To demonstrate professional database management, this project implements:
+- **Tiggers**: Automatic `updated_at` timestamps for data integrity.
+- **Stored Procedures (Functions)**: Atomic blacklisting logic executed on the server.
+- **Database Cursors**: Row-by-row processing within stored functions for complex cleanups.
 
 ---
 
@@ -80,24 +88,22 @@ Students can apply to placement drives, companies can manage applicants, and adm
 
 Placement-Portal/
 │
-├── app.py
-├── create_database.py
-├── placement_portal.db
-├── README.md
+├── app.py                  # Main Flask backend (Supabase SDK)
+├── supabase_schema.sql     # Cloud database schema & RDBMS features
+├── migrate_to_supabase.py  # Data migration script
+├── .env                    # Cloud credentials (excluded from Git)
+├── README.md               # Project documentation
 │
 ├── static/
-│ ├── images/
-│ └── uploads/
-│ └── student resumes
+│   ├── images/
+│   └── uploads/            # Local resume storage
 │
-├── templates/
-│ ├── admin_dashboard.html
-│ ├── company_dashboard.html
-│ ├── student_dashboard.html
-│ └── other templates
+├── templates/              # HTML templates
+│   ├── admin/
+│   ├── company/
+│   └── student/
 │
-├── venv/
-└── .gitignore
+└── requirements.txt        # Python dependencies
 
 ---
 
@@ -110,8 +116,17 @@ The following ER diagram shows the relationships between the main database table
 </p>
 
 
-## Database ER Diagram
-
 <p align="center">
   <img src="./er_diagram.png" width="900">
 </p>
+
+## ⚙️ Setup & Installation
+1.  **Clone the Repository**
+2.  **Install dependencies**: `pip install -r requirements.txt`
+3.  **Set up Supabase**:
+    *   Create a new project on [Supabase](https://supabase.com/).
+    *   Run the code in `supabase_schema.sql` in the Supabase SQL Editor.
+4.  **Configure `.env`**: Add your `SUPABASE_URL` and `SUPABASE_KEY`.
+5.  **Run the App**: `python app.py`
+
+---

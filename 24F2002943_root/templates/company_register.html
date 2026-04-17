@@ -1,49 +1,79 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Company Registration</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h2>Company Registration</h2>
+{% block title %}Company Registration - Placement Portal{% endblock %}
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    {% for message in messages %}
-      <p>{{ message }}</p>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+{% block main_content %}
+<div class="auth-page">
+    <div class="auth-card" style="max-width: 600px;">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Partner Registration</h2>
+            <p class="text-muted">Register your company to start hiring talented students.</p>
+        </div>
 
-<form method="POST">
+        <form method="POST">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Company Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-building text-muted"></i></span>
+                        <input type="text" name="name" class="form-control border-start-0 ps-0" placeholder="e.g. Acme Corp" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Location</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-map-marker-alt text-muted"></i></span>
+                        <input type="text" name="location" class="form-control border-start-0 ps-0" placeholder="e.g. New York, NY" required>
+                    </div>
+                </div>
+            </div>
 
-    <label>Company Name:</label><br>
-    <input type="text" name="name" required><br><br>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Industry</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-industry text-muted"></i></span>
+                        <input type="text" name="industry" class="form-control border-start-0 ps-0" placeholder="e.g. Technology" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Work Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-envelope text-muted"></i></span>
+                        <input type="email" name="email" class="form-control border-start-0 ps-0" placeholder="hr@company.com" required>
+                    </div>
+                </div>
+            </div>
 
-    <label>Email:</label><br>
-    <input type="email" name="email" required><br><br>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                    <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="••••••••" required
+                           pattern="(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}"
+                           title="Password must be at least 6 characters, include 1 uppercase letter, 1 number, and 1 special character.">
+                </div>
+            </div>
 
-    <label>Location:</label><br>
-    <input type="text" name="location" required><br><br>
+            <button type="submit" class="btn btn-primary w-100 py-2 mb-4">
+                Register Company
+            </button>
+        </form>
 
-    
-    <label>Industry:</label><br>
-    <input type="text" name="industry" required><br><br>
-    
+        <div class="text-center pt-2">
+            <p class="mb-1 text-muted">Already registered?</p>
+            <a href="{{ url_for('company_login') }}" class="text-primary fw-bold text-decoration-none">Sign in here</a>
+        </div>
+        
+        <hr class="my-4 text-muted opacity-25">
+        
+        <div class="text-center">
+            <a href="{{ url_for('home') }}" class="text-muted text-decoration-none small">
+                <i class="fas fa-arrow-left me-1"></i> Back to Homepage
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-    <label>Password:</label><br>
-    <input type="password" name="password" required><br><br>
-
-    <button type="submit">Register</button>
-
-</form>
-
-<br>
-
-<a href="{{ url_for('company_login') }}">
-    Already Registered? Login
-</a>
-
-</body>
-</html>
 

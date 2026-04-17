@@ -1,114 +1,99 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manage Students</title>
-    <style>
-        body { font-family: Arial; margin: 30px; }
+{% extends "base.html" %}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
+{% block title %}Manage Students - Placement Portal{% endblock %}
 
-        table, th, td {
-            border: 1px solid #999;
-        }
+{% block page_title %}Manage Students{% endblock %}
 
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
+{% block content %}
+<div class="container-fluid">
+    <!-- Filters & Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('manage_students') }}" class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0" placeholder="Search by name, email, or phone..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{{ url_for('manage_students') }}" class="btn btn-outline-secondary w-100">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        th {
-            background-color: #e0e0e0;
-        }
-
-        .btn {
-            padding: 5px 10px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        .btn-blacklist {
-            background-color: red;
-            color: white;
-        }
-
-        .search-box {
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-
-<h2>Manage Students</h2>
-
-<!-- Search Form -->
-<div class="search-box">
-    <form method="GET" action="{{ url_for('manage_students') }}">
-        <input type="text"
-               name="search"
-               placeholder="Search by name, email, phone"
-               value="{{ search_query }}">
-        <button type="submit">Search</button>
-    </form>
+    <!-- Students Table -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Student Information</th>
+                        <th>Contact Details</th>
+                        <th>Academic Record</th>
+                        <th>System Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-3" style="background: #eef2ff; color: #4f46e5;">
+                                    {{ student["full_name"][0] | upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ student["full_name"] }}</div>
+                                    <small class="text-muted">ID: #ST{{ student["id"] }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>{{ student["email"] }}</div>
+                            <small class="text-muted"><i class="fas fa-phone me-1"></i> {{ student["phone"] or "Not provided" }}</small>
+                        </td>
+                        <td>
+                            {% if student["resume_path"] %}
+                                <a href="{{ url_for('serve_resume', filename=student['resume_path']) }}" target="_blank" class="btn btn-sm btn-outline-indigo">
+                                    <i class="fas fa-file-pdf me-1"></i> Resume
+                                </a>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary italic">No Resume</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student["is_blacklisted"] == 1 %}
+                                <span class="badge bg-danger text-white">Blacklisted</span>
+                            {% else %}
+                                <span class="badge bg-success-subtle text-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student["is_blacklisted"] == 0 %}
+                                <a href="{{ url_for('blacklist_student', student_id=student['id']) }}" class="btn btn-sm btn-outline-danger" title="Blacklist Student">
+                                    <i class="fas fa-user-slash"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">No actions</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-user-graduate fa-3x mb-3 opacity-25"></i>
+                            <p>No students found matching your search.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-
-{% if students %}
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Resume</th>
-        <th>Status</th>
-        <th>Action</th>
-    </tr>
-
-    {% for student in students %}
-    <tr>
-        <td>{{  student["id"] }}</td>
-        <td>{{ student["full_name"] }}</td>
-        <td>{{  student["email"] }}</td>
-        <td>{{ student["phone"] or "N/A" }}</td>
-        <td>
-            {% if student["resume_path"] %}
-                <a href="{{  url_for('static', filename='uploads/' + student['resume_path']) }}" target="_blank">
-                   View Resume
-                </a>
-            {% else %}
-                Not  Uploaded
-            {% endif %}
-        </td>
-        <td>
-            {% if student["is_blacklisted"] == 1 %}
-                Blacklisted
-            {% else %}
-                Active
-            {% endif %}
-        </td>
-        <td>
-            {% if student["is_blacklisted"] == 0 %}
-                <a href="{{  url_for('blacklist_student', student_id=student['id']) }}"
-                   class="btn btn-blacklist">
-                    Blacklist
-                </a>
-            {% else %}
-                —
-            {%  endif %}
-        </td>
-    </tr> 
-    {%  endfor %}
-</table >
-{% else %}
-<p>No students found.</p>
-{% endif %}
-
-<br>
-<a href="{{  url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
-
-</body  >
-</html>
+{% endblock %}

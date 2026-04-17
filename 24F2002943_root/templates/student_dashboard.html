@@ -1,223 +1,155 @@
-<!DOCTYPE html>
-<html>
-<head>
+{% extends "base.html" %}
 
-<title>Student Dashboard</title>
+{% block title %}Student Dashboard - Placement Portal{% endblock %}
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+{% block page_title %}Student Dashboard{% endblock %}
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block content %}
+<div class="container-fluid">
+    <!-- Placement Success Message -->
+    {% if placement_info %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-success text-white border-0 shadow-sm">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-party-horn fa-3x mb-3"></i>
+                    <h3 class="fw-bold">Congratulations, {{ student_name }}!</h3>
+                    <p class="lead mb-0">You have been placed at <strong>{{ placement_info.company_name }}</strong> as a <strong>{{ placement_info.title }}</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-<style>
+    <!-- Overview Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="stats-icon indigo">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ available_drives|length if available_drives else 0 }}</h3>
+                    <p class="stats-label">Available Drives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="stats-icon blue">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ applied_drives|length if applied_drives else 0 }}</h3>
+                    <p class="stats-label">Applied Jobs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="stats-icon green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{% if placement_info %}1{% else %}0{% endif %}</h3>
+                    <p class="stats-label">Placements</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-/* background image */
+    <!-- Available Drives -->
+    {% if not placement_info %}
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Available Drives</h4>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Location</th>
+                        <th>Skills</th>
+                        <th>Deadline</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for drive in available_drives %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-primary">{{ drive.company_name }}</div>
+                        </td>
+                        <td>{{ drive.title }}</td>
+                        <td><i class="fas fa-map-marker-alt text-muted me-1"></i> {{ drive.location }}</td>
+                        <td>
+                            {% for skill in drive.required_skills.split(',') %}
+                            <span class="badge bg-light text-dark border">{{ skill.strip() }}</span>
+                            {% endfor %}
+                        </td>
+                        <td><span class="text-muted">{{ drive.deadline }}</span></td>
+                        <td>
+                            <a href="{{ url_for('apply_drive', drive_id=drive.id) }}" class="btn btn-primary btn-sm px-3">
+                                Apply Now
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No drives available at the moment.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
-body{
-background:url("{{ url_for('static', filename='images/student_dashboard.jpg') }}");
-background-size:cover;
-background-position:center;
-background-repeat:no-repeat;
-}
-
-/* dark overlay */
-
-body::before{
-content:"";
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.55);
-z-index:-1;
-}
-
-/* main dashboard container */
-
-.dashboard-box{
-background:rgba(255,255,255,0.92);
-padding:35px;
-border-radius:12px;
-backdrop-filter:blur(6px);
-}
-
-/* section spacing */
-
-.section{
-margin-top:45px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container mt-5 mb-5 dashboard-box">
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-
-<h2>Student Dashboard</h2>
-
-<div>
-<a href="{{ url_for('student_profile') }}" class="btn btn-dark">Profile</a>
-<a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    <!-- Your Applications -->
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Your Applications</h4>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Drive Role</th>
+                        <th>Status</th>
+                        <th>Applied On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applied_drives %}
+                    <tr>
+                        <td class="fw-bold">{{ app.company_name }}</td>
+                        <td>{{ app.title }}</td>
+                        <td>
+                            {% if app.status == "Placed" %}
+                            <span class="badge bg-success-subtle text-success">Placed</span>
+                            {% elif app.status == "Shortlisted" %}
+                            <span class="badge bg-warning-subtle text-warning">Shortlisted</span>
+                            {% elif app.status == "Interview" %}
+                            <span class="badge bg-info-subtle text-info">Interview</span>
+                            {% elif app.status == "Rejected" %}
+                            <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">{{ app.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="text-muted">{{ app.applied_at }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">You haven't applied to any drives yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-
-</div>
-
-
-<!-- ================= PLACEMENT MESSAGE ================= -->
-
-{% if placement_info %}
-
-<div class="alert alert-success text-center mb-5">
-
-<h4>🎉 Congratulations {{ student_name }}!</h4>
-
-<p class="mb-0">
-
-You have been placed at
-<strong>{{ placement_info.company_name }}</strong>
-
-for the role of
-
-<strong>{{ placement_info.title }}</strong>.
-
-</p>
-
-</div>
-
-{% endif %}
-
-
-<!-- ================= AVAILABLE DRIVES ================= -->
-
-{% if not placement_info %}
-
-<div class="section">
-
-<h4>Available Drives</h4>
-
-<div class="table-responsive">
-
-<table class="table table-bordered table-striped">
-
-<thead class="table-dark">
-
-<tr>
-<th>Company</th>
-<th>Title</th>
-<th>Location</th>
-<th>Skills</th>
-<th>Deadline</th>
-<th>Action</th>
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for drive in available_drives %}
-
-<tr>
-
-<td>{{ drive.company_name }}</td>
-<td>{{ drive.title }}</td>
-<td>{{ drive.location }}</td>
-<td>{{ drive.required_skills }}</td>
-<td>{{ drive.deadline }}</td>
-
-<td>
-
-<a href="{{ url_for('apply_drive', drive_id=drive.id) }}"
-class="btn btn-primary btn-sm">
-
-Apply
-
-</a>
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
-{% endif %}
-
-
-<div class="section">
-
-<h4>Your Applications</h4>
-
-<div class="table-responsive">
-
-<table class="table table-bordered table-striped">
-
-<thead class="table-dark">
-
-<tr>
-<th> Company</th>
-<th> Drive</th>
-<th>Status </th>
-<th>Date  </th>
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for app in applied_drives %}
-
-<tr>
-
-<td>{{ app.company_name }}</td>
-<td>{{  app.title }}</td>
-
-<td>
-
-{% if  app.status == "Placed" %}
-<span class="badge bg-success">Placed</span>
-
-{% elif app.status == "Shortlisted" %}
-<span  class="badge bg-warning text-dark">Shortlisted</span>
-
-{% elif app.status == "Interview" %}
-<span class="badge  bg-info">Interview</span>
-
-{% elif app.status == "Rejected" %}
-<span class="badge bg-danger ">Rejected </span>
-
-{% else %}
-<span  class="badge bg-secondary">{{  app.status }}</span>
-
-{% endif %}
-
-</td>
-
-<td> {{ app.applied_at }}</td>
-
-</tr>
-
-{% endfor  %}
-
-</tbody>
-
-</table >
-
-</div >
-
-</div>
-
-</div>
-
-</body >
-</html>
+{% endblock %}

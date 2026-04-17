@@ -1,0 +1,23 @@
+# Project Report Walkthrough
+
+I have generated a comprehensive project report for your **Placement Portal Application**. The report follows your specific format and includes all the technical analysis we discussed.
+
+## 📑 Key Sections Included
+- **EER Diagram**: A professional Mermaid-based diagram showing entities and constraints.
+- **Normalization Details**: Full justification for the **3NF** design.
+- **RDBMS Features**: Documentation on the automatic SQL triggers and database cursors.
+- **Technology Stack**: A complete breakdown of the Front-End and Back-End technologies.
+
+## 📸 Captured Screenshots
+I ran your application locally to capture the following professional screenshots, which are now embedded in the report:
+1.  **Validation**: Showing secure login handling.
+2.  **Reporting**: The Admin Dashboard with interactive charts.
+3.  **Database Trigger**: The user profile update that fires the SQL timestamp trigger.
+
+## 📄 How to Save as PDF
+The report is saved in Markdown format ([.md](file:///c:/Users/Tanaya/Desktop/24f2002943/24F2002943_root/README.md)), which is perfect for generating a standard PDF.
+1.  Open the [Project_Report.md](file:///C:/Users/Tanaya/.gemini/antigravity/brain/2d8e17e2-1092-4a0d-8b3a-3e1644d19bb8/Placement_Portal_Project_Report.md) file.
+2.  Use a Markdown viewer (like VS Code) and select **"Export to PDF"** or **"Print to PDF"**.
+3.  Fill in your group member details in the blank placeholders provided.
+
+![Report Assembly Complete](report_screenshots_1776279665706.webp)

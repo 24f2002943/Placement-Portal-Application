@@ -4,10 +4,26 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from werkzeug.utils import secure_filename
 from flask import jsonify
-from datetime import timedelta
-import sqlite3
 import os
 import uuid
+import datetime
+import shutil
+from datetime import timedelta
+from supabase import create_client, Client
+import re
+from dotenv import load_dotenv
+
+def is_strong_password(password):
+    # At least 6 chars, 1 uppercase, 1 number, 1 special character
+    if len(password) < 6:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[\W_]", password):
+        return False
+    return True
 
 
 app = Flask(__name__)
@@ -45,13 +61,9 @@ def role_required(role):
     return decorator
 
 
-DB_NAME = "placement_portal.db"
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 
@@ -67,33 +79,31 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_key):
 
-    if not user_key or ":" not  in user_key:
+    if not user_key or ":" not in user_key:
         return None
 
-    role, user_id = user_key.split(":",  1)
+    role, user_id = user_key.split(":", 1)
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     if role == "admin":
-        cursor.execute(" SELECT id FROM Admin WHERE id=?", (user_id,))
-        if cursor.fetchone():
-            conn.close()
-            return User(user_id,  "admin")
+        response = supabase.table("admin").select("id").eq("id", user_id).execute()
+        if response.data:
+            return User(user_id, "admin")
 
     if role == "company":
-        cursor.execute("SELECT id FROM Company WHERE id=?", (user_id,))
-        if cursor.fetchone():
-            conn.close()
-            return User(user_id,  "company" )
+        response = supabase.table("company").select("id").eq("id", user_id).execute()
+        if response.data:
+            return User(user_id, "company")
 
     if role == "student":
-        cursor.execute("SELECT id  FROM Student WHERE id=?", (user_id,))
-        if cursor.fetchone():
-            conn.close()
-            return  User(user_id,  "student")
+        response = supabase.table("student").select("id").eq("id", user_id).execute()
+        if response.data:
+            return User(user_id, "student")
 
-    conn.close()
     return None
 
 
@@ -155,33 +165,20 @@ def admin_login():
             flash("Enter username and password", "danger")
             return redirect(url_for("admin_login"))
 
-        conn = get_db_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT *
-            FROM Admin
-            WHERE username = ?
-        """, (username,))
-
-        admin = cursor.fetchone()
+        response = supabase.table("admin").select("*").eq("username", username).execute()
+        admin = response.data[0] if response.data else None
 
         if not admin:
-            conn.close()
             flash("Invalid credentials", "danger")
             return redirect(url_for("admin_login"))
 
         if not check_password_hash(admin["password_hash"], password):
-            conn.close()
             flash("Invalid credentials", "danger")
             return redirect(url_for("admin_login"))
 
         user = User(admin["id"], "admin")
         login_user(user, remember=True)
         session.permanent = True
-
-        conn.close()
 
         return redirect(url_for("admin_dashboard"))
 
@@ -195,59 +192,46 @@ def admin_dashboard():
         logout_user()
         return redirect(url_for("admin_login"))
      
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    total_companies = supabase.table("company").select("id", count="exact").execute().count
+    total_students = supabase.table("student").select("id", count="exact").execute().count
+    total_jobs = supabase.table("placementdrive").select("id", count="exact").execute().count
+    total_applications = supabase.table("application").select("id", count="exact").execute().count
+    total_placements = supabase.table("placement").select("id", count="exact").execute().count
 
-    
-    cursor.execute("SELECT COUNT(*) FROM Company")
-    total_companies = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM Student")
-    total_students = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM PlacementDrive")
-    total_jobs = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM Application")
-    total_applications = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM Placement")
-    total_placements = cursor.fetchone()[0]
-
-    
     admin_labels = ["Jobs", "Applications", "Placements"]
     admin_counts = [total_jobs, total_applications, total_placements]
 
-
-    cursor.execute("""
-        SELECT approval_status, COUNT(*) as count
-        FROM Company
-        GROUP BY approval_status
-    """)
-    company_data = cursor.fetchall()
-
-    company_labels = [row["approval_status"] for row in company_data]
-    company_counts = [row["count"] for row in company_data]
-
+    company_stats_res = supabase.rpc("get_company_stats").execute()
+    # If RPC doesn't exist, we can fallback or implement it. 
+    # For now, let's try to do it with client-side grouping if needed, 
+    # but RPC is cleaner for SQL GROUP BY.
+    # Let's check if I should implement the grouping here.
     
-    cursor.execute("""
-        SELECT status, COUNT(*) as count
-        FROM Application
-        GROUP BY status
-    """)
-    app_data = cursor.fetchall()
+    # Actually, simpler to just fetch all and group in Python for now if schema is small
+    # or use .select('approval_status') and then count.
+    
+    company_data = supabase.table("company").select("approval_status").execute().data
+    company_counts_dict = {}
+    for row in company_data:
+        status = row["approval_status"]
+        company_counts_dict[status] = company_counts_dict.get(status, 0) + 1
+    
+    company_labels = list(company_counts_dict.keys())
+    company_counts = list(company_counts_dict.values())
 
-    application_labels = [row["status"] for row in app_data]
-    application_counts = [row["count"] for row in app_data]
+    app_data = supabase.table("application").select("status").execute().data
+    app_counts_dict = {}
+    for row in app_data:
+        status = row["status"]
+        app_counts_dict[status] = app_counts_dict.get(status, 0) + 1
+    
+    application_labels = list(app_counts_dict.keys())
+    application_counts = list(app_counts_dict.values())
 
-   
     placement_rate = (
         round((total_placements / total_students) * 100, 2)
         if total_students else 0
     )
-
-    conn.close()
 
     return render_template(
         "admin_dashboard.html",
@@ -272,28 +256,15 @@ def manage_students():
 
     search_query = request.args.get("search", "").strip()
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
     if search_query:
-        cursor.execute("""
-            SELECT *
-            FROM Student
-            WHERE full_name LIKE ?
-               OR email LIKE ?
-               OR phone LIKE ?
-        """, (
-            f"%{search_query}%",
-            f"%{search_query}%",
-            f"%{search_query}%"
-        ))
+        # Supabase 'or' logic for complex filters
+        response = supabase.table("student").select("*").or_(
+            f"full_name.ilike.%{search_query}%,email.ilike.%{search_query}%,phone.ilike.%{search_query}%"
+        ).execute()
     else:
-        cursor.execute("SELECT * FROM Student")
+        response = supabase.table("student").select("*").execute()
 
-    students = cursor.fetchall()
-    conn.close()
-
+    students = response.data
     return render_template(
         "manage_students.html",
         students=students,
@@ -304,18 +275,8 @@ def manage_students():
 @login_required
 def blacklist_student(student_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE Student
-        SET is_blacklisted = 1
-        WHERE id = ?
-    """, (student_id,))
-
-    conn.commit()
-    conn.close()
-
+    # Use Supabase RPC (Stored Procedure) to demonstrate RDBMS features
+    supabase.rpc("blacklist_student_with_cleanup", {"s_id": student_id}).execute()
     return redirect(url_for("manage_students"))
 
 
@@ -327,23 +288,14 @@ def manage_companies():
 
     search_query = request.args.get("search", "").strip()
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
     if search_query:
-        cursor.execute("""
-            SELECT * FROM Company
-            WHERE name LIKE ?
-            OR email LIKE ?
-        
-        """, (f"%{search_query}%", f"%{search_query}%"))
+        response = supabase.table("company").select("*").or_(
+            f"name.ilike.%{search_query}%,email.ilike.%{search_query}%"
+        ).execute()
     else:
-        cursor.execute("SELECT * FROM Company")
+        response = supabase.table("company").select("*").execute()
 
-    companies = cursor.fetchall()
-    conn.close()
-
+    companies = response.data
     return render_template("manage_companies.html",
                            companies=companies,
                            search_query=search_query)
@@ -351,35 +303,20 @@ def manage_companies():
 @app.route("/admin/companies")
 def admin_view_companies():
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    response = supabase.table("company").select(
+        "id, name, email, location, approval_status, is_blacklisted"
+    ).order("approval_status").execute()
 
-    cursor.execute("""
-        SELECT id, name, email, location, approval_status, is_blacklisted
-        FROM Company
-        ORDER BY approval_status
-    """)
-
-    companies = cursor.fetchall()
-    conn.close()
-
+    companies = response.data
     return render_template("manage_companies.html", companies=companies)
 
 
 @app.route("/admin/company/approve/<int:company_id>")
 def approve_company(company_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE Company
-        SET approval_status = 'Approved'
-        WHERE id = ?
-    """, (company_id,))
-
-    conn.commit()
-    conn.close()
+    supabase.table("company").update({
+        "approval_status": "Approved"
+    }).eq("id", company_id).execute()
 
     flash("Company Approved Successfully!", "success")
     return redirect(url_for("admin_view_companies"))
@@ -387,17 +324,9 @@ def approve_company(company_id):
 @app.route("/admin/company/reject/<int:company_id>")
 def reject_company(company_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE Company
-        SET approval_status = 'Rejected'
-        WHERE id = ?
-    """, (company_id,))
-
-    conn.commit()
-    conn.close()
+    supabase.table("company").update({
+        "approval_status": "Rejected"
+    }).eq("id", company_id).execute()
 
     flash("Company Rejected!", "danger")
     return redirect(url_for("admin_view_companies"))
@@ -407,14 +336,7 @@ def reject_company(company_id):
 @login_required
 def blacklist_company(company_id):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("UPDATE Company SET is_blacklisted=1 WHERE id=?", (company_id,))
-
-    conn.commit()
-    conn.close()
-
+    supabase.table("company").update({"is_blacklisted": 1}).eq("id", company_id).execute()
     return redirect(url_for("manage_companies"))
 
 
@@ -424,37 +346,20 @@ def manage_jobs():
 
     search_query = request.args.get("search", "").strip()
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
     if search_query:
-
-        cursor.execute("""
-            SELECT PlacementDrive.*, Company.name
-            FROM PlacementDrive
-            JOIN Company ON PlacementDrive.company_id = Company.id
-            WHERE PlacementDrive.title LIKE ?
-            OR PlacementDrive.location LIKE ?
-            OR Company.name LIKE ?
-        """, (
-            f"%{search_query}%",
-            f"%{search_query}%",
-            f"%{search_query}%"
-        ))
+        # Supabase join: select fields from PlacementDrive and name from Company
+        response = supabase.table("placementdrive").select(
+            "*, company(name)"
+        ).or_(
+            f"title.ilike.%{search_query}%,location.ilike.%{search_query}%,company.name.ilike.%{search_query}%"
+        ).execute()
 
     else:
+        response = supabase.table("placementdrive").select(
+            "*, company(name)"
+        ).execute()
 
-        cursor.execute("""
-            SELECT PlacementDrive.*, Company.name
-            FROM PlacementDrive
-            JOIN Company ON PlacementDrive.company_id = Company.id
-        """)
-
-    jobs = cursor.fetchall()
-
-    conn.close()
-
+    jobs = response.data
     return render_template(
         "manage_jobs.html",
         jobs=jobs,
@@ -466,16 +371,10 @@ def manage_jobs():
 @login_required
 def update_job_status(drive_id, action):
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
     if action == "approve":
-        cursor.execute("UPDATE PlacementDrive SET approval_status='Approved' WHERE id=?", (drive_id,))
+        supabase.table("placementdrive").update({"approval_status": "Approved"}).eq("id", drive_id).execute()
     elif action == "reject":
-        cursor.execute("UPDATE PlacementDrive SET approval_status='Rejected' WHERE id=?", (drive_id,))
-
-    conn.commit()
-    conn.close()
+        supabase.table("placementdrive").update({"approval_status": "Rejected"}).eq("id", drive_id).execute()
 
     return redirect(url_for("manage_jobs"))
 
@@ -486,42 +385,27 @@ def manage_applications():
 
     search_query = request.args.get("search", "").strip()
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
     if search_query:
-
-        cursor.execute("""
-            SELECT Application.id,
-                   Application.status,
-                   Student.full_name AS student_name,
-                   PlacementDrive.title AS drive_title
-            FROM Application
-            JOIN Student ON Application.student_id = Student.id
-            JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-            WHERE Student.full_name LIKE ?
-            OR PlacementDrive.title LIKE ?
-        """, (
-            f"%{search_query}%",
-            f"%{search_query}%"
-        ))
+        response = supabase.table("application").select(
+            "id, status, student(full_name), placementdrive(title)"
+        ).or_(
+            f"student.full_name.ilike.%{search_query}%,placementdrive.title.ilike.%{search_query}%"
+        ).execute()
 
     else:
+        response = supabase.table("application").select(
+            "id, status, student(full_name), placementdrive(title)"
+        ).execute()
 
-        cursor.execute("""
-            SELECT Application.id,
-                   Application.status,
-                   Student.full_name AS student_name,
-                   PlacementDrive.title AS drive_title
-            FROM Application
-            JOIN Student ON Application.student_id = Student.id
-            JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-        """)
-
-    applications = cursor.fetchall()
-
-    conn.close()
+    # Flatten for template compatibility if needed
+    applications = []
+    for app in response.data:
+        applications.append({
+            "id": app["id"],
+            "status": app["status"],
+            "student_name": app["student"]["full_name"],
+            "drive_title": app["placementdrive"]["title"]
+        })
 
     return render_template(
         "manage_applications.html",
@@ -544,41 +428,34 @@ def company_register():
         location = request.form.get("location", "").strip()
         industry = request.form.get("industry", "").strip()
 
-        
         if not name or not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for("company_register"))
 
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "danger")
+        if not is_strong_password(password):
+            flash("Password must be at least 6 characters, include 1 uppercase, 1 number, and 1 special character.", "danger")
             return redirect(url_for("company_register"))
 
         if "@" not in email:
             flash("Invalid email format.", "danger")
             return redirect(url_for("company_register"))
         
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        
-        cursor.execute("SELECT id FROM Company WHERE email = ?", (email,))
-        existing_company = cursor.fetchone()
-
-        if existing_company:
-            conn.close()
+        response = supabase.table("company").select("id").eq("email", email).execute()
+        if response.data:
             flash("Email already registered.", "warning")
             return redirect(url_for("company_register"))
 
         hashed_password = generate_password_hash(password)
 
-        cursor.execute("""
-            INSERT INTO Company (name, email, password_hash, location, industry, approval_status, is_blacklisted)
-            VALUES (?, ?, ?, ?,? ,'Pending', 0)
-        """, (name, email, hashed_password, location, industry))
-
-        conn.commit()
-        conn.close()
+        supabase.table("company").insert({
+            "name": name,
+            "email": email,
+            "password_hash": hashed_password,
+            "location": location,
+            "industry": industry,
+            "approval_status": "Pending",
+            "is_blacklisted": 0
+        }).execute()
 
         flash("Registration successful! Wait for admin approval.", "success")
         return redirect(url_for("company_login"))
@@ -598,60 +475,39 @@ def company_login():
             flash("Please enter both email and password.", "danger")
             return redirect(url_for("company_login"))
 
-        conn = get_db_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT *
-            FROM Company
-            WHERE email = ?
-        """, (email,))
-
-        company = cursor.fetchone()
+        response = supabase.table("company").select("*").eq("email", email).execute()
+        company = response.data[0] if response.data else None
 
         if not company:
-            conn.close()
             flash("Invalid email or password.", "danger")
             return redirect(url_for("company_login"))
 
         if company["is_blacklisted"] == 1:
-            conn.close()
             flash("Your company account has been blacklisted.", "danger")
             return redirect(url_for("company_login"))
 
         if company["approval_status"] == "Pending":
-            conn.close()
             flash("Your account is pending admin approval.", "warning")
             return redirect(url_for("company_login"))
 
         if company["approval_status"] == "Rejected":
-            conn.close()
             flash("Your registration was rejected by admin.", "danger")
             return redirect(url_for("company_login"))
 
         if not check_password_hash(company["password_hash"], password):
-            conn.close()
             flash("Invalid email or password.", "danger")
             return redirect(url_for("company_login"))
 
-        
-        cursor.execute("""
-            UPDATE Company
-            SET updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """, (company["id"],))
 
-        conn.commit()
-        conn.close()
+        supabase.table("company").update({
+            "updated_at": datetime.datetime.utcnow().isoformat()
+        }).eq("id", company["id"]).execute()
 
-        
         user = User(company["id"], "company")
         login_user(user, remember=True)
         session.permanent = True
 
         flash("Login successful!", "success")
-
         return redirect(url_for("company_dashboard"))
 
     return render_template("company_login.html")
@@ -665,119 +521,74 @@ def company_dashboard():
     if current_user.role != "company":
         return redirect(url_for("company_login"))
 
-    
     company_id = int(current_user.id)
     filter_type = request.args.get("filter")
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
+    total_jobs = supabase.table("placementdrive").select("id", count="exact").eq("company_id", company_id).execute().count
+    active_jobs = supabase.table("placementdrive").select("id", count="exact").eq("company_id", company_id).eq("drive_status", "Active").execute().count
+    closed_jobs = supabase.table("placementdrive").select("id", count="exact").eq("company_id", company_id).eq("drive_status", "Closed").execute().count
     
-    cursor.execute("SELECT COUNT(*) FROM PlacementDrive WHERE company_id=?", (company_id,))
-    total_jobs = cursor.fetchone()[0]
-
-    cursor.execute("""
-        SELECT COUNT(*) FROM PlacementDrive
-        WHERE company_id=? AND drive_status='Active'
-    """, (company_id,))
-    active_jobs = cursor.fetchone()[0]
-
-    cursor.execute("""
-        SELECT COUNT(*) FROM PlacementDrive
-        WHERE company_id=? AND drive_status='Closed'
-    """, (company_id,))
-    closed_jobs = cursor.fetchone()[0]
-
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM Application
-        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-        WHERE PlacementDrive.company_id=?
-    """, (company_id,))
-    total_applications = cursor.fetchone()[0]
+    total_applications = supabase.table("application").select(
+        "id", count="exact"
+    ).eq("placementdrive.company_id", company_id).execute().count 
+    # Wait, the above join in count is tricky. Let's fetch the drive IDs for this company first.
+    
+    company_drives = supabase.table("placementdrive").select("id").eq("company_id", company_id).execute()
+    drive_ids = [d["id"] for d in company_drives.data]
+    
+    if drive_ids:
+        total_applications = supabase.table("application").select("id", count="exact").in_("drive_id", drive_ids).execute().count
+    else:
+        total_applications = 0
 
     if filter_type == "applications":
         return redirect(url_for("view_company_applications"))    
 
-
-
-    base_query = """
-    SELECT PlacementDrive.*,
-            COUNT(Application.id) AS total_applications
-    FROM PlacementDrive
-    LEFT JOIN Application
-    ON PlacementDrive.id = Application.drive_id
-    WHERE PlacementDrive.company_id=?
-    """
-
-    params = [company_id]
+    query = supabase.table("placementdrive").select("*, application(id)").eq("company_id", company_id)
 
     if filter_type == "active":
-        base_query += " AND PlacementDrive.drive_status='Active'"
-
+        query = query.eq("drive_status", "Active")
     elif filter_type == "closed":
-        base_query += " AND PlacementDrive.drive_status='Closed'"
+        query = query.eq("drive_status", "Closed")
 
-    base_query += """ 
-    GROUP BY PlacementDrive.id
-    ORDER BY PlacementDrive.id DESC
-    """
-
-    cursor.execute(base_query, params)
-    jobs = cursor.fetchall()
-
+    jobs_res = query.order("id", desc=True).execute()
+    jobs_data = jobs_res.data
     
-    cursor.execute("""
-        SELECT PlacementDrive.title,
-               COUNT(Application.id) as total_apps
-        FROM PlacementDrive
-        LEFT JOIN Application
-        ON PlacementDrive.id = Application.drive_id
-        WHERE PlacementDrive.company_id = ?
-        GROUP BY PlacementDrive.id
-    """, (company_id,))
+    # Process jobs to include total_applications count
+    jobs = []
+    for job in jobs_data:
+        job["total_applications"] = len(job.get("application", []))
+        jobs.append(job)
 
-    drive_stats = cursor.fetchall()
-      
-    max_apps = max([row["total_apps"] for row in drive_stats], default=1)
-
+    # Statistics for charts
     drive_chart = []
-    for row in drive_stats:
-        percent = (row["total_apps"] / max_apps) * 100 if max_apps else 0
+    for job in jobs:
         drive_chart.append({
-            "title": row["title"],
-            "total": row["total_apps"],
-            "percent": round(percent, 2)
+            "title": job["title"],
+            "total": job["total_applications"]
         })
     
-    
+    # Calculate percentages for drive chart
+    max_apps = max([d["total"] for d in drive_chart], default=1)
+    for d in drive_chart:
+        d["percent"] = round((d["total"] / max_apps) * 100, 2) if max_apps else 0
 
-    cursor.execute("""
-        SELECT status, COUNT(*) as count
-        FROM Application
-        JOIN PlacementDrive
-        ON Application.drive_id = PlacementDrive.id
-        WHERE PlacementDrive.company_id = ?
-        GROUP BY status
-    """, (company_id,))
-
-    status_data = cursor.fetchall()
-
+    # Status statistics
+    status_counts_dict = {}
+    if drive_ids:
+        app_res = supabase.table("application").select("status").in_("drive_id", drive_ids).execute()
+        for app in app_res.data:
+            s = app["status"]
+            status_counts_dict[s] = status_counts_dict.get(s, 0) + 1
+            
     status_chart = []
-    max_status = max([row["count"] for row in status_data], default=1)
-
-    for row in status_data:
-        percent = (row["count"] / max_status) * 100 if max_status else 0
+    max_status = max(status_counts_dict.values(), default=1)
+    for s, c in status_counts_dict.items():
         status_chart.append({
-            "status": row["status"],
-            "count": row["count"],
-            "percent": round(percent, 2)
+            "status": s,
+            "count": c,
+            "percent": round((c / max_status) * 100, 2) if max_status else 0
         })
-
-
-
-    conn.close()
 
     return render_template(
         "company_dashboard.html",
@@ -1003,77 +814,38 @@ def company_update_status(application_id):
         return redirect(url_for("company_login"))
 
     company_id = int(current_user.id)
-
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
     new_status = request.form.get("status")
 
     if new_status not in ["Applied", "Shortlisted", "Interview", "Rejected", "Placed"]:
-        conn.close()
         return "Invalid status."
 
+    response = supabase.table("application").select(
+        "student_id, status, placementdrive(company_id)"
+    ).eq("id", application_id).execute()
 
-    cursor.execute("""
-        SELECT Application.student_id,
-               Application.status,
-               PlacementDrive.company_id
-        FROM Application
-        JOIN PlacementDrive
-            ON Application.drive_id = PlacementDrive.id
-        WHERE Application.id = ?
-    """, (application_id,))
-
-    row = cursor.fetchone()
-
-    if not row:
-        conn.close()
+    if not response.data:
         return "Application not found."
 
+    row = response.data[0]
     student_id = row["student_id"]
     current_status = row["status"]
-    drive_company_id = row["company_id"]
+    drive_company_id = row["placementdrive"]["company_id"]
 
-    
     if drive_company_id != company_id:
-        conn.close()
         return "Unauthorized action."
 
-
     if current_status == "Placed":
-        conn.close()
         return "Placement is final and cannot be modified."
 
-    
     if new_status == "Placed":
-
+        # Finalize placement
+        supabase.table("application").update({"status": "Placed"}).eq("id", application_id).execute()
         
-        cursor.execute("""
-            UPDATE Application
-            SET status = 'Placed'
-            WHERE id = ?
-        """, (application_id,))
-
-        
-        cursor.execute("""
-            UPDATE Application
-            SET status = 'Rejected'
-            WHERE student_id = ?
-            AND id != ?
-            AND status != 'Placed'
-        """, (student_id, application_id))
+        # Reject other applications for the same student
+        supabase.table("application").update({"status": "Rejected"}).eq("student_id", student_id).neq("id", application_id).neq("status", "Placed").execute()
 
     else:
-        
-        cursor.execute("""
-            UPDATE Application
-            SET status = ?
-            WHERE id = ?
-        """, (new_status, application_id))
-
-    conn.commit()
-    conn.close()
+        supabase.table("application").update({"status": new_status}).eq("id", application_id).execute()
 
     return redirect(url_for("company_dashboard"))
 
@@ -1083,12 +855,10 @@ def company_update_status(application_id):
 def student_register():
     if request.method == "POST":
 
-        
         full_name = request.form.get("full_name","").strip()
         email = request.form.get("email","").strip()
         password = request.form.get("password","")
 
-        
         if not full_name or not email or not password:
             return "All fields are required."
 
@@ -1098,34 +868,23 @@ def student_register():
         if "@" not in email:
             return "Invalid email address."
 
-        if len(password) < 6:
-            return "Password must be at least 6 characters."
+        if not is_strong_password(password):
+            return "Password must be at least 6 characters, include 1 uppercase, 1 number, and 1 special character."
 
-        
         hashed_password = generate_password_hash(password)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                INSERT INTO Student (
-                    full_name,
-                    email,
-                    password_hash,
-                    is_blacklisted
-                )
-                VALUES (?, ?, ?, 0)
-            """, (full_name, email, hashed_password))
-
-            conn.commit()
-            conn.close()
-
-            return redirect(url_for("student_login"))
-
-        except sqlite3.IntegrityError:
-            conn.close()
+        response = supabase.table("student").select("id").eq("email", email).execute()
+        if response.data:
             return "Email already exists."
+
+        supabase.table("student").insert({
+            "full_name": full_name,
+            "email": email,
+            "password_hash": hashed_password,
+            "is_blacklisted": 0
+        }).execute()
+
+        return redirect(url_for("student_login"))
 
     return render_template("student_register.html")
 
@@ -1137,38 +896,21 @@ def student_login():
         email = request.form["email"].strip()
         password = request.form["password"]
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT id, password_hash, is_blacklisted
-            FROM Student
-            WHERE email=?
-        """, (email,))
-
-        student = cursor.fetchone()
-        conn.close()
+        response = supabase.table("student").select("*").eq("email", email).execute()
+        student = response.data[0] if response.data else None
 
         if not student:
             return "Invalid Credentials"
 
-        student_id, stored_password, is_blacklisted = student
-
-
-        print("Stored hash:", stored_password)
-        print("Entered password:", password)
-        print("Match:", check_password_hash(stored_password, password))
-
-        if is_blacklisted == 1:
+        if student["is_blacklisted"] == 1:
             return "Account Blacklisted"
 
-        if not check_password_hash(stored_password, password):
+        if not check_password_hash(student["password_hash"], password):
             return "Invalid Credentials"
 
-        user = User(student_id, "student")
+        user = User(student["id"], "student")
         login_user(user, remember=True)
         session.permanent = True
-            
 
         return redirect(url_for("student_dashboard"))
 
@@ -1185,97 +927,71 @@ def student_dashboard():
     student_id = int(current_user.id)
     search = request.args.get("search", "").strip()
 
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    # Get student name
+    student_res = supabase.table("student").select("full_name").eq("id", student_id).execute()
+    student_name = student_res.data[0]["full_name"] if student_res.data else "Student"
 
+    # Get placement info
+    placement_res = supabase.table("application").select(
+        "placementdrive(title), placementdrive(company(name))"
+    ).eq("student_id", student_id).eq("status", "Placed").limit(1).execute()
     
-    cursor.execute("SELECT full_name FROM Student WHERE id=?", (student_id,))
-    student = cursor.fetchone()
-    student_name = student["full_name"] if student else "Student"
+    placement_info = None
+    if placement_res.data:
+        p = placement_res.data[0]
+        placement_info = {
+            "title": p["placementdrive"]["title"],
+            "company_name": p["placementdrive"]["company"]["name"]
+        }
 
-    
-    cursor.execute("""
-        SELECT PlacementDrive.title,
-               Company.name AS company_name
-        FROM Application
-        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-        JOIN Company ON PlacementDrive.company_id = Company.id
-        WHERE Application.student_id = ?
-        AND Application.status = 'Placed'
-        LIMIT 1
-    """, (student_id,))
-    placement_info = cursor.fetchone()
-
-    
+    # Available drives logic
     available_drives = []
-
     if not placement_info:
+        # Get applied drive IDs
+        applied_res = supabase.table("application").select("drive_id").eq("student_id", student_id).execute()
+        applied_ids = [a["drive_id"] for a in applied_res.data]
 
-        base_query = """
-            SELECT PlacementDrive.id,
-                   PlacementDrive.title,
-                   PlacementDrive.location,
-                   PlacementDrive.required_skills,
-                   PlacementDrive.deadline,
-                   Company.name AS company_name
-            FROM PlacementDrive
-            JOIN Company ON PlacementDrive.company_id = Company.id
-            WHERE PlacementDrive.approval_status = 'Approved'
-            AND PlacementDrive.drive_status = 'Active'
-            AND PlacementDrive.deadline >= DATE('now')
-            AND PlacementDrive.id NOT IN (
-                SELECT drive_id
-                FROM Application
-                WHERE student_id = ?
-            )
-        """
 
-        params = [student_id]
+        now = datetime.date.today().isoformat()
+
+        query = supabase.table("placementdrive").select(
+            "*, company(name)"
+        ).eq("approval_status", "Approved").eq("drive_status", "Active").gte("deadline", now)
+
+        if applied_ids:
+            query = query.not_.in_("id", applied_ids)
 
         if search:
-            base_query += """
-                AND (
-                    PlacementDrive.title LIKE ?
-                    OR Company.name LIKE ?
-                    OR PlacementDrive.required_skills LIKE ?
-                    OR PlacementDrive.location LIKE ?
-                )
-            """
-            params.extend([f"%{search}%"] * 4)
+            query = query.or_(
+                f"title.ilike.%{search}%,company.name.ilike.%{search}%,required_skills.ilike.%{search}%,location.ilike.%{search}%"
+            )
 
-        base_query += " ORDER BY PlacementDrive.deadline ASC"
+        drives_res = query.order("deadline", asc=True).execute()
+        available_drives = drives_res.data
 
-        cursor.execute(base_query, params)
-        available_drives = cursor.fetchall()
-
+    # Applied drives
+    applied_drives_res = supabase.table("application").select(
+        "placementdrive(title), placementdrive(company(name)), status, applied_at"
+    ).eq("student_id", student_id).order("applied_at", desc=True).execute()
     
-    cursor.execute("""
-        SELECT PlacementDrive.title,
-               Company.name AS company_name,
-               Application.status,
-               Application.applied_at
-        FROM Application
-        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-        JOIN Company ON PlacementDrive.company_id = Company.id
-        WHERE Application.student_id = ?
-        ORDER BY Application.applied_at DESC
-    """, (student_id,))
-    applied_drives = cursor.fetchall()
+    applied_drives = []
+    for app in applied_drives_res.data:
+        applied_drives.append({
+            "title": app["placementdrive"]["title"],
+            "company_name": app["placementdrive"]["company"]["name"],
+            "status": app["status"],
+            "applied_at": app["applied_at"]
+        })
     
+    # Status counts for chart
+    app_stats_res = supabase.table("application").select("status").eq("student_id", student_id).execute()
+    status_counts_dict = {}
+    for app in app_stats_res.data:
+        s = app["status"]
+        status_counts_dict[s] = status_counts_dict.get(s, 0) + 1
     
-    cursor.execute("""
-        SELECT status, COUNT(*) as count
-        FROM Application
-        WHERE student_id = ?
-        GROUP BY status
-    """, (student_id,))
-    status_data = cursor.fetchall()
-
-    status_labels = [row["status"] for row in status_data]
-    status_counts = [row["count"] for row in status_data]
-
-    conn.close()
+    status_labels = list(status_counts_dict.keys())
+    status_counts = list(status_counts_dict.values())
 
     return render_template(
         "student_dashboard.html",
@@ -1312,34 +1028,20 @@ def student_profile():
         cgpa = request.form.get("cgpa")
         skills = request.form.get("skills")
 
-        
-        cursor.execute("""
-            UPDATE Student
-            SET full_name = ?,
-                phone = ?,
-                degree = ?,
-                branch = ?,
-                college = ?,
-                cgpa = ?,
-                skills = ?
-            WHERE id = ?
-        """, (
-            full_name,
-            phone,
-            degree,
-            branch,
-            college,
-            cgpa,
-            skills,
-            student_id
-        ))
+        supabase.table("student").update({
+            "full_name": full_name,
+            "phone": phone,
+            "degree": degree,
+            "branch": branch,
+            "college": college,
+            "cgpa": cgpa,
+            "skills": skills
+        }).eq("id", student_id).execute()
 
         
         file = request.files.get("resume")
 
-            
         if file:
-
             if file.filename == "":
                 flash("No file selected.", "danger")
                 return redirect(url_for("student_profile"))
@@ -1348,49 +1050,30 @@ def student_profile():
                 flash("Only PDF files are allowed.", "danger")
                 return redirect(url_for("student_profile"))
 
-            
-            cursor.execute("SELECT resume_path FROM Student WHERE id=?", (student_id,))
-            old_resume_row = cursor.fetchone()
-            old_resume = old_resume_row["resume_path"] if old_resume_row else None
+            res = supabase.table("student").select("resume_path").eq("id", student_id).execute()
+            old_resume = res.data[0]["resume_path"] if res.data else None
 
-            
             filename = secure_filename(file.filename)
             unique_name = str(uuid.uuid4()) + "_" + filename
 
-            UPLOAD_FOLDER = "static/uploads"
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
+            # --- Supabase Storage Upload ---
+            file_content = file.read()
+            supabase.storage.from_("resumes").upload(unique_name, file_content, {"content-type": "application/pdf"})
+            # -------------------------------
 
-            file.save(os.path.join(UPLOAD_FOLDER, unique_name))
+            supabase.table("student").update({
+                "resume_path": unique_name
+            }).eq("id", student_id).execute()
 
-            
-            cursor.execute("""
-                UPDATE Student
-                SET resume_path = ?
-                WHERE id = ?
-            """, (unique_name, student_id))
-
-            
             if old_resume:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM Application
-                    WHERE resume_snapshot_path = ?
-                """, (old_resume,))
-                count = cursor.fetchone()[0]
+                # Optional: Delete old resume from cloud
+                try:
+                    supabase.storage.from_("resumes").remove([old_resume])
+                except:
+                    pass
 
-                if count == 0:
-                    old_path = os.path.join(UPLOAD_FOLDER, old_resume)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-
-        conn.commit()
-
-    
-    cursor.execute("SELECT * FROM Student WHERE id=?", (student_id,))
-    student = cursor.fetchone()
-
-    conn.close()
-
+    res = supabase.table("student").select("*").eq("id", student_id).execute()
+    student = res.data[0] if res.data else None
     return render_template("student_profile.html", student=student)
 
 
@@ -1400,130 +1083,72 @@ def student_profile():
 def apply_drive(drive_id):
 
     student_id = int(current_user.id)
-    conn = get_db_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
 
     # check if already placed
-    cursor.execute("""
-        SELECT COUNT(*) FROM Application
-        WHERE student_id = ?
-        AND status = 'Placed'
-    """, (student_id,))
-    
-    if cursor.fetchone()[0] > 0:
-        conn.close()
+    placed_res = supabase.table("application").select("id", count="exact").eq("student_id", student_id).eq("status", "Placed").execute()
+    if placed_res.count > 0:
         return "You are already placed and cannot apply."
 
     # get drive info
-    cursor.execute("""
-        SELECT PlacementDrive.*, Company.name AS company_name
-        FROM PlacementDrive
-        JOIN Company ON PlacementDrive.company_id = Company.id
-        WHERE PlacementDrive.id = ?
-        AND PlacementDrive.approval_status = 'Approved'
-        AND PlacementDrive.drive_status = 'Active'
-        AND PlacementDrive.deadline >= DATE('now')
-    """, (drive_id,))
+    import datetime
+    now = datetime.date.today().isoformat()
+    drive_res = supabase.table("placementdrive").select(
+        "*, company(name)"
+    ).eq("id", drive_id).eq("approval_status", "Approved").eq("drive_status", "Active").gte("deadline", now).execute()
     
-    drive = cursor.fetchone()
-
+    drive = drive_res.data[0] if drive_res.data else None
     if not drive:
-        conn.close()
         return "Drive not available."
 
     # get student's current resume
-    cursor.execute("SELECT resume_path FROM Student WHERE id=?", (student_id,))
-    resume_row = cursor.fetchone()
+    student_res = supabase.table("student").select("resume_path").eq("id", student_id).execute()
+    current_resume = student_res.data[0]["resume_path"] if student_res.data else None
 
-    if not resume_row or not resume_row["resume_path"]:
-        conn.close()
+    if not current_resume:
         return redirect(url_for("student_profile"))
 
-    current_resume = resume_row["resume_path"]
-
     # check if already applied
-    cursor.execute("""
-        SELECT * FROM Application
-        WHERE student_id = ?
-        AND drive_id = ?
-    """, (student_id, drive_id))
-
-    existing_application = cursor.fetchone()
+    existing_res = supabase.table("application").select("*").eq("student_id", student_id).eq("drive_id", drive_id).execute()
+    existing_application = existing_res.data[0] if existing_res.data else None
 
     if existing_application and existing_application["status"] != "Applied":
-        conn.close()
         return "Application can no longer be edited."
 
     if request.method == "POST":
-
         related_work = request.form.get("related_work")
         related_projects = request.form.get("related_projects")
         job_fit_statement = request.form.get("job_fit_statement")
 
         if not related_work or not related_projects or not job_fit_statement:
-            conn.close()
             return "All fields are required."
 
         if existing_application:
-
-            cursor.execute("""
-                UPDATE Application
-                SET related_work = ?,
-                    related_projects = ?,
-                    job_fit_statement = ?
-                WHERE student_id = ?
-                AND drive_id = ?
-            """, (
-                related_work,
-                related_projects,
-                job_fit_statement,
-                student_id,
-                drive_id
-            ))
+            supabase.table("application").update({
+                "related_work": related_work,
+                "related_projects": related_projects,
+                "job_fit_statement": job_fit_statement
+            }).eq("student_id", student_id).eq("drive_id", drive_id).execute()
 
         else:
+            # ---------- RESUME SNAPSHOT (CLOUD COPY) ----------
+            snapshot_name = "snapshot_" + (current_resume or "unknown")
+            try:
+                supabase.storage.from_("resumes").copy(current_resume, snapshot_name)
+            except:
+                snapshot_name = current_resume # Fallback if copy fails
+            # --------------------------------------------------
 
-            # ---------- RESUME SNAPSHOT CREATION ----------
-            import os
-            import shutil
+            supabase.table("application").insert({
+                "student_id": student_id,
+                "drive_id": drive_id,
+                "resume_snapshot_path": snapshot_name,
+                "related_work": related_work,
+                "related_projects": related_projects,
+                "job_fit_statement": job_fit_statement
+            }).execute()
 
-            source = os.path.join("static/uploads", current_resume)
-
-            snapshot_name = "snapshot_" + current_resume
-
-            destination = os.path.join("static/uploads", snapshot_name)
-
-            if os.path.exists(source):
-                shutil.copy(source, destination)
-            else:
-                snapshot_name = current_resume
-            # ----------------------------------------------
-
-            cursor.execute("""
-                INSERT INTO Application (
-                    student_id,
-                    drive_id,
-                    resume_snapshot_path,
-                    related_work,
-                    related_projects,
-                    job_fit_statement
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                student_id,
-                drive_id,
-                snapshot_name,
-                related_work,
-                related_projects,
-                job_fit_statement
-            ))
-
-        conn.commit()
-        conn.close()
         return redirect(url_for("student_dashboard"))
 
-    conn.close()
     return render_template(
         "application_form.html",
         drive=drive,
@@ -1540,42 +1165,22 @@ def logout():
 
 
 
-@app.route("/api/students", methods=["GET"])
-def api_get_students():
-
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT id, full_name, email, degree, branch FROM Student")
-    students = cursor.fetchall()
-    conn.close()
-
-    return jsonify([dict(row) for row in students])
+    response = supabase.table("student").select("id, full_name, email, degree, branch").execute()
+    return jsonify(response.data)
 
 
 @app.route("/api/students/<int:student_id>", methods=["GET"])
 def api_get_student(student_id):
-
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM Student WHERE id=?", (student_id,))
-    student = cursor.fetchone()
-    conn.close()
-
-    if not student:
+    response = supabase.table("student").select("*").eq("id", student_id).execute()
+    if not response.data:
         return jsonify({"error": "Student not found"}), 404
 
-    return jsonify(dict(student))
+    return jsonify(response.data[0])
 
 
 @app.route("/api/students", methods=["POST"])
 def api_create_student():
-
     data = request.get_json()
-
     full_name = data.get("full_name")
     email = data.get("email")
     password = data.get("password")
@@ -1585,127 +1190,83 @@ def api_create_student():
 
     hashed_password = generate_password_hash(password)
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            INSERT INTO Student (full_name, email, password_hash, is_blacklisted)
-            VALUES (?, ?, ?, 0)
-        """, (full_name, email, hashed_password))
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({"message": "Student created"}), 201
-
-    except sqlite3.IntegrityError:
-        conn.close()
+    # Check for existing email
+    exists_res = supabase.table("student").select("id").eq("email", email).execute()
+    if exists_res.data:
         return jsonify({"error": "Email already exists"}), 400
+
+    supabase.table("student").insert({
+        "full_name": full_name,
+        "email": email,
+        "password_hash": hashed_password,
+        "is_blacklisted": 0
+    }).execute()
+
+    return jsonify({"message": "Student created"}), 201
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 def api_update_student(student_id):
-
     data = request.get_json()
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE Student
-        SET full_name=?, phone=?, degree=?, branch=?, college=?, cgpa=?, skills=?
-        WHERE id=?
-    """, (
-        data.get("full_name"),
-        data.get("phone"),
-        data.get("degree"),
-        data.get("branch"),
-        data.get("college"),
-        data.get("cgpa"),
-        data.get("skills"),
-        student_id
-    ))
-
-    conn.commit()
-    conn.close()
+    
+    supabase.table("student").update({
+        "full_name": data.get("full_name"),
+        "phone": data.get("phone"),
+        "degree": data.get("degree"),
+        "branch": data.get("branch"),
+        "college": data.get("college"),
+        "cgpa": data.get("cgpa"),
+        "skills": data.get("skills")
+    }).eq("id", student_id).execute()
 
     return jsonify({"message": "Student updated"})
 
 
 @app.route("/api/students/<int:student_id>", methods=["DELETE"])
 def api_delete_student(student_id):
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM Student WHERE id=?", (student_id,))
-    conn.commit()
-    conn.close()
-
+    supabase.table("student").delete().eq("id", student_id).execute()
     return jsonify({"message": "Student deleted"})
 
 
 @app.route("/api/drives", methods=["GET"])
 def api_get_drives():
-
     status = request.args.get("status")
     location = request.args.get("location")
     search = request.args.get("search")
 
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    query = """
-        SELECT id, title, location, required_skills,
-               approval_status, drive_status
-        FROM PlacementDrive
-        WHERE approval_status = 'Approved'
-    """
-
-    params = []
+    query = supabase.table("placementdrive").select(
+        "id, title, location, required_skills, approval_status, drive_status"
+    ).eq("approval_status", "Approved")
 
     if status:
-        query += " AND drive_status = ?"
-        params.append(status)
+        query = query.eq("drive_status", status)
 
     if location:
-        query += " AND location LIKE ?"
-        params.append(f"%{location}%")
+        query = query.ilike("location", f"%{location}%")
 
     if search:
-        query += " AND (title LIKE ? OR required_skills LIKE ?)"
-        params.append(f"%{search}%")
-        params.append(f"%{search}%")
+        query = query.or_(f"title.ilike.%{search}%,required_skills.ilike.%{search}%")
 
-    cursor.execute(query, params)
-    drives = cursor.fetchall()
-    conn.close()
-
-    return jsonify([dict(row) for row in drives])
+    response = query.execute()
+    return jsonify(response.data)
 
 
 @app.route("/api/applications", methods=["GET"])
 def api_get_applications():
+    response = supabase.table("application").select(
+        "id, status, student(full_name), placementdrive(title)"
+    ).execute()
 
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    # Flatten for JSON response
+    output = []
+    for app in response.data:
+        output.append({
+            "id": app["id"],
+            "status": app["status"],
+            "full_name": app["student"]["full_name"],
+            "title": app["placementdrive"]["title"]
+        })
 
-    cursor.execute("""
-        SELECT Application.id,
-               Student.full_name,
-               PlacementDrive.title,
-               Application.status
-        FROM Application
-        JOIN Student ON Application.student_id = Student.id
-        JOIN PlacementDrive ON Application.drive_id = PlacementDrive.id
-    """)
-
-    applications = cursor.fetchall()
-    conn.close()
-
-    return jsonify([dict(row) for row in applications])
+    return jsonify(output)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,302 +1,201 @@
-<!DOCTYPE html>
-<html>
-<head>
+{% extends "base.html" %}
 
-<title>Company Dashboard</title>
+{% block title %}Company Dashboard - Placement Portal{% endblock %}
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+{% block page_title %}Company Dashboard{% endblock %}
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
-<style>
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon blue">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ total_jobs }}</h3>
+                    <p class="stats-label">Total Drives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon indigo">
+                    <i class="fas fa-toggle-on"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ active_jobs }}</h3>
+                    <p class="stats-label">Active Drives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon rose">
+                    <i class="fas fa-toggle-off"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ closed_jobs }}</h3>
+                    <p class="stats-label">Closed Drives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon green">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <h3 class="stats-value">{{ total_applications }}</h3>
+                    <p class="stats-label">Total Applicants</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Charts Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="card">
+                <h5 class="fw-bold mb-4">Applications Per Drive</h5>
+                <div style="height: 300px;">
+                    <canvas id="driveChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <h5 class="fw-bold mb-4">Application Status distribution</h5>
+                <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 
-body{
-    background:url("{{ url_for('static', filename='images/company_dashboard.png') }}");
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-}
-
-
-
-body::before{
-    content:"";
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.55);
-    z-index:-1;
-}
-
-
-
-.dashboard-box{
-    background:rgba(255,255,255,0.94);
-    padding:35px;
-    border-radius:12px;
-    backdrop-filter:blur(6px);
-}
-
-
-.card{
-    border:none;
-    border-radius: 10px;
-}
-
-
-.bar-bg{
-    background:#e9ecef;
-    height:20px;
-    border-radius :5px;
-}
-
-.bar-fill-green{
-    background:#28a745;
-    height:20px;
-    border-radius:5px;
-}
-
-.bar-fill-blue{
-    background:#007bff;
-    height:20px;
-    border-radius:5px;
-}
-
-
-.section{
-    margin-top:50px;
-}
-
-.chart-item{
-    margin-bottom:25px;
-}
-
-h2{
-    font-weight:600;
-}
-
-h4{
-    margin-bottom:20px;
-    font-weight: 600;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container mt-5 mb-5 dashboard-box">
-
-
-
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-
-<h2>Company Dashboard</h2>
-
-<div>
-<a href="{{ url_for('post_drive') }}" class="btn btn-dark">Post New Drive</a>
-<a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    <!-- Your Drives Table -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Manage Your Drives</h4>
+            <a href="{{ url_for('post_drive') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i> Post New Drive
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Job Title</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Engagement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-primary">{{ job.title }}</div>
+                            <small class="text-muted">{{ job.required_skills }}</small>
+                        </td>
+                        <td><i class="fas fa-map-marker-alt text-muted me-1"></i> {{ job.location }}</td>
+                        <td>
+                            {% if job.drive_status == 'Active' %}
+                            <span class="badge bg-success-subtle text-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold">{{ job.total_applications }}</span>
+                                <a href="{{ url_for('view_job_applications', drive_id=job.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">
+                                    View
+                                </a>
+                            </div>
+                        </td>
+                        <td>
+                            {% if job.drive_status == 'Active' %}
+                            <a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-stop-circle me-1"></i> Close
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-play-circle me-1"></i> Activate
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">You haven't posted any drives yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-
-</div>
-
-
-<div class="row text-center g-4">
-
-<div class="col-md-3">
-<div class="card shadow-sm">
-<div class="card-body">
-<h6>Total Drives</h6>
-<h3>{{ total_jobs }}</h3>
-</div>
-</div>
-</div>
-
-<div class="col-md-3">
-<div class="card shadow-sm">
-<div class="card-body">
-<h6>Active Drives</h6>
-<h3>{{ active_jobs }}</h3>
-</div>
-</div>
-</div>
-
-<div class="col-md-3">
-<div class="card shadow-sm">
-<div class="card-body">
-<h6>Closed Drives</h6>
-<h3>{{ closed_jobs }}</h3>
-</div>
-</div>
-</div>
-
-<div class="col-md-3">
-<div class="card shadow-sm">
-<div class="card-body">
-<h6>Total Applications</h6>
-<h3>{{ total_applications }}</h3>
-</div>
-</div>
-</div>
-
-</div>
-
-
-
-
-<div class="section">
-
-<h4>Your Drives</h4>
-
-<div class="table-responsive">
-
-<table class="table table-bordered table-striped">
-
-<thead class="table-dark">
-
-<tr>
-<th>Title</th>
-<th>Location</th>
-<th>Skills</th>
-<th>Status</th>
-<th>Applications</th>
-<th>Action</th>
-</tr>
-
-</thead>
-
-<tbody>
-
-{% if jobs %}
-
-{% for job in jobs %}
-
-<tr>
-
-<td>{{ job.title }}</td>
-<td>{{ job.location }}</td>
-<td>{{ job.required_skills }}</td>
-<td>{{ job.drive_status }}</td>
-
-<td>
-
-<strong>{{ job.total_applications }}</strong>
-
-<br>
-
-<a href="{{ url_for('view_job_applications', drive_id=job.id) }}"
-class="btn btn-sm btn-primary mt-1">
-View
-</a>
-
-</td>
-
-<td>
-
-{% if job.drive_status == 'Active' %}
-
-<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
-class="btn btn-sm btn-danger">
-Close
-</a>
-
-{% else %}
-
-<a href="{{ url_for('toggle_drive_status', drive_id=job.id) }}"
-class="btn btn-sm btn-success">
-Activate
-</a>
-
-{% endif %}
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-{% else %}
-
-<tr>
-<td colspan="6">No drives posted yet.</td>
-</tr>
-
-{% endif %}
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
-
-<!-- APPLICATIONS PER DRIVE -->
-
-<div class="section">
-
-<h4>Applications Per Drive</h4>
-
-{% if drive_chart %}
-
-{% for item in drive_chart %}
-
-<div class="chart-item">
-
-<p><strong>{{ item.title }} ({{ item.total }})</strong></p>
-
-<div class="bar-bg">
-<div class="bar-fill-green" style="width: {{ item.percent }}%"></div>
-</div>
-
-</div>
-
-{% endfor %}
-
-{% else %}
-
-<p>No application data available.</p>
-
-{% endif %}
-
-</div>
-
-
-<div class ="section">
-
-<h4>Status Distribution</h4>
-
-{% if status_chart %}
-
-{% for item in status_chart %}
-
-<div class="chart-item">
-
-<p><strong>{{ item.status }} ({{ item.count }})</strong></p>
-
-<div class="bar-bg">
-<div class="bar-fill-blue" style="width: {{ item.percent }}%"></div>
-</div>
-
-</div>
-
-{% endfor %}
-
-{% else %}
-
-<p>No status data available.</p>
-
-{% endif %}
-
-</div>
-
-</div>
-
-</body>
-</html>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = "#6b7280";
+
+    const driveData = {{ drive_chart | tojson }};
+    const driveLabels = driveData.map(d => d.title);
+    const driveCounts = driveData.map(d => d.total);
+
+    new Chart(document.getElementById("driveChart"), {
+        type: "bar",
+        data: {
+            labels: driveLabels,
+            datasets: [{
+                label: "Applications",
+                data: driveCounts,
+                backgroundColor: "#4f46e5",
+                borderRadius: 8,
+                barThickness: 30
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    const statusData = {{ status_chart | tojson }};
+    const statusLabels = statusData.map(s => s.status);
+    const statusCounts = statusData.map(s => s.count);
+
+    new Chart(document.getElementById("statusChart"), {
+        type: "doughnut",
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusCounts,
+                backgroundColor: ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#6b7280"],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
+        }
+    });
+</script>
+{% endblock %}

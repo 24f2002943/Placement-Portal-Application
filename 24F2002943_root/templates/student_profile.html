@@ -1,74 +1,122 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Student Profile</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h2>Student Profile</h2>
+{% block title %}My Profile - Placement Portal{% endblock %}
 
-<form method="POST" enctype="multipart/form-data">
+{% block page_title %}Student Profile{% endblock %}
 
-    <h3>Basic Information</h3>
+{% block content %}
+<div class="container py-4">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="row g-4">
+            <!-- Left Column: Basic & Academic Info -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-user-circle me-2 text-primary"></i>Basic Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Full Name</label>
+                                <input type="text" name="full_name" class="form-control" value="{{ student['full_name'] }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Work Email</label>
+                                <input type="email" class="form-control bg-light" value="{{ student['email'] }}" disabled>
+                                <small class="text-muted">Email cannot be changed.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-phone-alt text-muted small"></i></span>
+                                    <input type="text" name="phone" class="form-control border-start-0" value="{{ student['phone'] or '' }}" placeholder="+1 234 567 890">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <label>Full Name:</label><br>
-    <input type="text" name="full_name"
-           value="{{ student['full_name'] }}" required><br><br>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-graduation-cap me-2 text-primary"></i>Academic Details</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Degree</label>
+                                <input type="text" name="degree" class="form-control" value="{{ student['degree'] or '' }}" placeholder="e.g. B.Tech">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch / Specialization</label>
+                                <input type="text" name="branch" class="form-control" value="{{ student['branch'] or '' }}" placeholder="e.g. Computer Science">
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">College / University</label>
+                                <input type="text" name="college" class="form-control" value="{{ student['college'] or '' }}" placeholder="Enter university name">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Current CGPA</label>
+                                <input type="number" step="0.01" name="cgpa" class="form-control" value="{{ student['cgpa'] or '' }}" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <label>Email (cannot change):</label><br>
-    <input type="email"
-           value="{{ student['email'] }}" disabled><br><br>
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 border-bottom pb-2"><i class="fas fa-tools me-2 text-primary"></i>Technical Skills</h5>
+                        <textarea name="skills" class="form-control" rows="5" placeholder="List your key technical skills, languages, and frameworks...">{{ student['skills'] or '' }}</textarea>
+                        <div class="form-text">Comma separated values work best (e.g. Python, React, SQL).</div>
+                    </div>
+                </div>
+            </div>
 
-    <label>Phone:</label><br>
-    <input type="text" name="phone"
-           value="{{ student['phone'] or '' }}"><br><br>
+            <!-- Right Column: Resume & Actions -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-4 text-center">
+                        <h5 class="fw-bold mb-4">Resume Document</h5>
+                        <div class="mb-4">
+                            {% if student['resume_path'] %}
+                                <div class="bg-primary-subtle p-4 rounded-3 mb-3">
+                                    <i class="fas fa-file-pdf fa-3x text-primary"></i>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-success-subtle text-success">Resume Uploaded</span>
+                                </div>
+                                <a href="{{ url_for('serve_resume', filename=student['resume_path']) }}" target="_blank" class="btn btn-outline-indigo w-100 mb-2">
+                                    <i class="fas fa-eye me-1"></i> View Current Resume
+                                </a>
+                            {% else %}
+                                <div class="bg-secondary-subtle p-4 rounded-3 mb-3">
+                                    <i class="fas fa-file-upload fa-3x text-secondary opacity-50"></i>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-secondary-subtle text-secondary">No Resume Uploaded</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-start">
+                            <label class="form-label fw-semibold small text-uppercase">Update Resume</label>
+                            <input type="file" name="resume" class="form-control form-control-sm">
+                            <small class="text-muted d-block mt-1">Accepted: PDF (max 2MB)</small>
+                        </div>
+                    </div>
+                </div>
 
-    <h3>Academic Information</h3>
+                <div class="card shadow-sm border-0 bg-primary text-white mb-4">
+                    <div class="card-body p-4 text-center">
+                        <p class="mb-4 opacity-75">Ensure your profile is complete to increase your chances with recruiters.</p>
+                        <button type="submit" class="btn btn-white w-100 py-2 fw-bold">
+                            <i class="fas fa-save me-1"></i> Update Profile
+                        </button>
+                    </div>
+                </div>
 
-    <label>Degree:</label><br>
-    <input type="text" name="degree"
-           value="{{ student['degree'] or '' }}"><br><br>
-
-    <label>Branch:</label><br>
-    <input type="text" name="branch"
-           value="{{ student['branch'] or '' }}"><br><br>
-
-    <label>College:</label><br>
-    <input type="text" name="college"
-           value="{{ student['college'] or '' }}"><br><br>
-
-    <label>CGPA:</label><br>
-    <input type="number" step="0.01" name="cgpa"
-           value="{{ student['cgpa'] or '' }}"><br><br>
-
-    <h3>Professional Information</h3>
-
-    <label>Skills:</label><br>
-    <textarea name="skills"
-              rows="4">{{ student['skills'] or '' }}</textarea><br><br>
-
-    <h3>Resume</h3>
-
-<label>Upload / Update Resume:</label><br>
-<input type="file" name="resume"><br><br>
-
-{% if student['resume_path'] %}
-<p>
-<strong>Current Resume:</strong>
-<a href="{{ url_for('static', filename='uploads/' + student['resume_path']) }}" target="_blank">
-    View Resume
-</a>
-</p>
-{% else %}
-<p><strong>No resume uploaded yet.</strong></p>
-{% endif %}
-
-<button type="submit">Save Profile</button>
-
-</form>
-
-<br>
-<a href="{{ url_for('student_dashboard') }}">Back to Dashboard</a>
-
-</body>
-</html>
+                <div class="text-center">
+                    <a href="{{ url_for('student_dashboard') }}" class="text-muted text-decoration-none small">
+                        <i class="fas fa-arrow-left me-1"></i> Return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
